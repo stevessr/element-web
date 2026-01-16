@@ -16,6 +16,7 @@ import {
     LockIcon,
     PollsIcon,
     SettingsIcon,
+    StickerIcon,
     VoiceCallIcon,
     NotificationsIcon,
     AdvancedSettingsIcon,
@@ -42,6 +43,7 @@ import { type NonEmptyArray } from "../../../@types/common";
 import { PollHistoryTab } from "../settings/tabs/room/PollHistoryTab";
 import ErrorBoundary from "../elements/ErrorBoundary";
 import { PeopleRoomSettingsTab } from "../settings/tabs/room/PeopleRoomSettingsTab";
+import StickersRoomSettingsTab from "../settings/tabs/room/StickersRoomSettingsTab";
 
 export const enum RoomSettingsTab {
     General = "ROOM_GENERAL_TAB",
@@ -50,6 +52,7 @@ export const enum RoomSettingsTab {
     Security = "ROOM_SECURITY_TAB",
     Roles = "ROOM_ROLES_TAB",
     Notifications = "ROOM_NOTIFICATIONS_TAB",
+    Stickers = "ROOM_STICKERS_TAB",
     Bridges = "ROOM_BRIDGES_TAB",
     Advanced = "ROOM_ADVANCED_TAB",
     PollHistory = "ROOM_POLL_HISTORY_TAB",
@@ -181,6 +184,15 @@ class RoomSettingsDialog extends React.Component<IProps, IState> {
                 <AdminIcon />,
                 <RolesRoomSettingsTab room={this.state.room} />,
                 "RoomSettingsRolesPermissions",
+            ),
+        );
+        tabs.push(
+            new Tab(
+                RoomSettingsTab.Stickers,
+                _td("room_settings|stickers|title"),
+                <StickerIcon />,
+                <StickersRoomSettingsTab room={this.state.room} />,
+                "RoomSettingsStickers",
             ),
         );
         tabs.push(
