@@ -97,6 +97,7 @@ export const StickersRoomSettingsTab: React.FC<{ room: Room }> = ({ room }) => {
                 const content = event.getContent() ?? {};
                 const pack = typeof content.pack === "object" && content.pack ? content.pack : {};
                 const images = typeof content.images === "object" && content.images ? content.images : {};
+                const imageCount = Object.keys(images as Record<string, unknown>).length;
                 const displayName =
                     (typeof (pack as { display_name?: unknown }).display_name === "string"
                         ? (pack as { display_name: string }).display_name
@@ -104,7 +105,7 @@ export const StickersRoomSettingsTab: React.FC<{ room: Room }> = ({ room }) => {
                 return {
                     stateKey,
                     displayName,
-                    imageCount: Object.keys(images as Record<string, unknown>).length,
+                    imageCount,
                     enabledGlobally: Boolean(enabledRoomState[room.roomId]?.[stateKey]),
                     event,
                 };
@@ -161,7 +162,7 @@ export const StickersRoomSettingsTab: React.FC<{ room: Room }> = ({ room }) => {
         if (!confirmed) return;
 
         try {
-            await room.client.sendStateEvent(room.roomId, ROOM_EMOTES_EVENT_TYPE, {}, stateKey);
+            await room.client.sendStateEvent(room.roomId, ROOM_EMOTES_EVENT_TYPE, { images: {}, pack: {} }, stateKey);
             await setGlobalEnabled(stateKey, false);
         } catch (error) {
             Modal.createDialog(ErrorDialog, {

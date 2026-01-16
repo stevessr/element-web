@@ -101,19 +101,18 @@ const getMimeForExtension = (ext: string): string => {
     }
 };
 
-const decodeAscii = (bytes: Uint8Array, start: number, length: number): string => {
-    let out = "";
-    for (let i = start; i < start + length; i += 1) {
-        const code = bytes[i];
-        if (!code) break;
-        out += String.fromCharCode(code);
-    }
-    return out;
+const decodeHeaderString = (bytes: Uint8Array, start: number, length: number): string => {
+    const view = bytes.subarray(start, start + length);
+    const end = view.indexOf(0);
+    const slice = end >= 0 ? view.subarray(0, end) : view;
+    return new TextDecoder().decode(slice).trim();
 };
 
 const parseTar = (bytes: Uint8Array): Array<{ name: string; data: Uint8Array }> => {
     const files: Array<{ name: string; data: Uint8Array }> = [];
     let offset = 0;
+    let paxPath: string | null = null;
+    let longName: string | null = null;
     while (offset + 512 <= bytes.length) {
         let isEmpty = true;
         for (let i = 0; i < 512; i += 1) {
@@ -124,15 +123,41 @@ const parseTar = (bytes: Uint8Array): Array<{ name: string; data: Uint8Array }> 
         }
         if (isEmpty) break;
 
-        const name = decodeAscii(bytes, offset, 100).trim();
-        const sizeField = decodeAscii(bytes, offset + 124, 12).trim();
+        const name = decodeHeaderString(bytes, offset, 100);
+        const prefix = decodeHeaderString(bytes, offset + 345, 155);
+        const sizeFieldRaw = decodeHeaderString(bytes, offset + 124, 12);
+        const sizeField = sizeFieldRaw.replace(/\0/g, "").trim();
         const size = sizeField ? parseInt(sizeField, 8) : 0;
-        const typeFlag = decodeAscii(bytes, offset + 156, 1);
+        if (!Number.isFinite(size) || size < 0) break;
 
+        const typeFlag = String.fromCharCode(bytes[offset + 156] || 0);
         const dataStart = offset + 512;
         const dataEnd = dataStart + size;
-        if (typeFlag !== "5" && name) {
-            files.push({ name, data: bytes.slice(dataStart, dataEnd) });
+        if (dataEnd > bytes.length) break;
+
+        if (typeFlag === "x") {
+            const text = new TextDecoder().decode(bytes.subarray(dataStart, dataEnd));
+            const lines = text.split("\n");
+            for (const line of lines) {
+                const space = line.indexOf(" ");
+                if (space <= 0) continue;
+                const record = line.slice(space + 1);
+                const eq = record.indexOf("=");
+                if (eq <= 0) continue;
+                const key = record.slice(0, eq);
+                const value = record.slice(eq + 1);
+                if (key === "path") paxPath = value;
+            }
+        } else if (typeFlag === "L") {
+            longName = new TextDecoder().decode(bytes.subarray(dataStart, dataEnd)).trim();
+        } else if (typeFlag !== "5") {
+            const fallbackName = prefix ? `${prefix}/${name}` : name;
+            const fullName = paxPath || longName || fallbackName;
+            paxPath = null;
+            longName = null;
+            if (fullName) {
+                files.push({ name: fullName, data: bytes.slice(dataStart, dataEnd) });
+            }
         }
 
         offset = dataStart + Math.ceil(size / 512) * 512;
@@ -296,7 +321,14 @@ const StickersPackEditorDialog: React.FC<IProps> = ({ room, event, enabledGlobal
             setImportProgress({ current: 0, total: entries.length });
 
             for (const entry of entries) {
-                const name = entry.name.split("/").pop() || "";
+                let name = entry.name.split("/").pop() || "";
+                if (name.includes("%")) {
+                    try {
+                        name = decodeURIComponent(name);
+                    } catch {
+                        // ignore invalid encodings
+                    }
+                }
                 if (!name) continue;
                 const dot = name.lastIndexOf(".");
                 const base = dot > 0 ? name.slice(0, dot) : name;
@@ -370,7 +402,12 @@ const StickersPackEditorDialog: React.FC<IProps> = ({ room, event, enabledGlobal
         setIsSaving(true);
         try {
             if (editingPack.originalStateKey && editingPack.originalStateKey !== stateKey) {
-                await room.client.sendStateEvent(room.roomId, ROOM_EMOTES_EVENT_TYPE, {}, editingPack.originalStateKey);
+                await room.client.sendStateEvent(
+                    room.roomId,
+                    ROOM_EMOTES_EVENT_TYPE,
+                    { images: {}, pack: {} },
+                    editingPack.originalStateKey,
+                );
             }
             await room.client.sendStateEvent(room.roomId, ROOM_EMOTES_EVENT_TYPE, content, stateKey);
             if (editingPack.originalStateKey && editingPack.originalStateKey !== stateKey) {
