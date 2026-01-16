@@ -5,44 +5,27 @@ SPDX-License-Identifier: AGPL-3.0-only OR GPL-3.0-only OR LicenseRef-Element-Com
 Please see LICENSE files in the repository root for full details.
 */
 
-import React, { useMemo, useState } from "react";
+import React, { useMemo } from "react";
 import { type AccountDataEvents, type MatrixEvent, type Room } from "matrix-js-sdk/src/matrix";
+import pako from "pako";
+import Tar from "tar-js";
 
 import { _t } from "../../../../../languageHandler";
 import { MatrixClientPeg } from "../../../../../MatrixClientPeg";
 import { useRoomState } from "../../../../../hooks/useRoomState";
 import { useAccountData } from "../../../../../hooks/useAccountData";
 import { EMOTE_ROOMS_EVENT_TYPE, ROOM_EMOTES_EVENT_TYPE } from "../../../../../utils/RoomEmotes";
-import Field from "../../../elements/Field";
+import { mediaFromMxc } from "../../../../../customisations/Media";
 import AccessibleButton from "../../../elements/AccessibleButton";
 import LabelledCheckbox from "../../../elements/LabelledCheckbox";
 import { SettingsSubsection, SettingsSubsectionText } from "../../shared/SettingsSubsection";
 import Modal from "../../../../../Modal";
 import QuestionDialog from "../../../dialogs/QuestionDialog";
 import ErrorDialog from "../../../dialogs/ErrorDialog";
+import StickersPackEditorDialog from "../../../dialogs/StickersPackEditorDialog";
 
 interface EmoteRoomsContent {
     rooms?: Record<string, Record<string, unknown>>;
-}
-
-interface EditableImage {
-    key: string;
-    url: string;
-    body: string;
-    usageSticker: boolean;
-    usageEmoticon: boolean;
-    info?: Record<string, unknown>;
-}
-
-interface EditablePack {
-    originalStateKey?: string;
-    originalEnabledGlobally?: boolean;
-    stateKey: string;
-    displayName: string;
-    attribution: string;
-    avatarUrl: string;
-    images: EditableImage[];
-    enableGlobally: boolean;
 }
 
 interface PackSummary {
@@ -63,33 +46,29 @@ const getImageUrl = (image: Record<string, unknown>): string => {
     return "";
 };
 
-const getUsageFlags = (usage: unknown): { sticker: boolean; emoticon: boolean } => {
-    if (!usage) return { sticker: true, emoticon: true };
-    if (Array.isArray(usage)) {
-        return {
-            sticker: usage.includes("sticker"),
-            emoticon: usage.includes("emoticon"),
-        };
+const getExtensionForMime = (mime: string | null): string => {
+    switch (mime) {
+        case "image/png":
+            return "png";
+        case "image/jpeg":
+            return "jpg";
+        case "image/gif":
+            return "gif";
+        case "image/webp":
+            return "webp";
+        case "image/apng":
+            return "apng";
+        case "image/svg+xml":
+            return "svg";
+        default:
+            return "png";
     }
-    return { sticker: true, emoticon: true };
 };
 
-const emptyImage = (): EditableImage => ({
-    key: "",
-    url: "",
-    body: "",
-    usageSticker: true,
-    usageEmoticon: false,
-});
-
-const emptyPack = (): EditablePack => ({
-    stateKey: "",
-    displayName: "",
-    attribution: "",
-    avatarUrl: "",
-    images: [emptyImage()],
-    enableGlobally: false,
-});
+const normalizeKey = (name: string): string => {
+    const base = name.replace(/\.[^/.]+$/, "");
+    return base.trim().replace(/\s+/g, "-");
+};
 
 export const StickersRoomSettingsTab: React.FC<{ room: Room }> = ({ room }) => {
     const client = MatrixClientPeg.safeGet();
@@ -103,9 +82,6 @@ export const StickersRoomSettingsTab: React.FC<{ room: Room }> = ({ room }) => {
         if (!events) return [] as MatrixEvent[];
         return Array.isArray(events) ? events : [events];
     });
-
-    const [editingPack, setEditingPack] = useState<EditablePack | null>(null);
-    const [isSaving, setIsSaving] = useState(false);
 
     const enabledRoomState = useMemo(() => accountData.rooms ?? {}, [accountData.rooms]);
     const canEdit = room.currentState.maySendStateEvent(
@@ -136,50 +112,10 @@ export const StickersRoomSettingsTab: React.FC<{ room: Room }> = ({ room }) => {
     }, [roomEmoteEvents, enabledRoomState, room.roomId]);
 
     const startEditPack = (event?: MatrixEvent): void => {
-        if (!event) {
-            setEditingPack(emptyPack());
-            return;
-        }
-        const stateKey = event.getStateKey() || "";
-        const content = event.getContent() ?? {};
-        const pack = typeof content.pack === "object" && content.pack ? content.pack : {};
-        const images = typeof content.images === "object" && content.images ? content.images : {};
-        const displayName =
-            (typeof (pack as { display_name?: unknown }).display_name === "string"
-                ? (pack as { display_name: string }).display_name
-                : undefined) || "";
-        const attribution =
-            typeof (pack as { attribution?: unknown }).attribution === "string"
-                ? (pack as { attribution: string }).attribution
-                : "";
-        const avatarUrl =
-            typeof (pack as { avatar_url?: unknown }).avatar_url === "string"
-                ? (pack as { avatar_url: string }).avatar_url
-                : "";
-
-        const imageList = Object.entries(images as Record<string, Record<string, unknown>>)
-            .sort(([a], [b]) => a.localeCompare(b))
-            .map(([key, image]) => {
-                const usage = getUsageFlags(image.usage);
-                return {
-                    key,
-                    url: getImageUrl(image),
-                    body: typeof image.body === "string" ? image.body : "",
-                    usageSticker: usage.sticker,
-                    usageEmoticon: usage.emoticon,
-                    info: typeof image.info === "object" && image.info ? (image.info as Record<string, unknown>) : undefined,
-                };
-            });
-
-        setEditingPack({
-            originalStateKey: stateKey,
-            originalEnabledGlobally: Boolean(enabledRoomState[room.roomId]?.[stateKey]),
-            stateKey,
-            displayName,
-            attribution,
-            avatarUrl,
-            images: imageList.length ? imageList : [emptyImage()],
-            enableGlobally: Boolean(enabledRoomState[room.roomId]?.[stateKey]),
+        Modal.createDialog(StickersPackEditorDialog, {
+            room,
+            event,
+            enabledGlobally: event ? Boolean(enabledRoomState[room.roomId]?.[event.getStateKey() || ""]) : false,
         });
     };
 
@@ -214,65 +150,6 @@ export const StickersRoomSettingsTab: React.FC<{ room: Room }> = ({ room }) => {
         }
     };
 
-    const saveEditingPack = async (): Promise<void> => {
-        if (!editingPack) return;
-        const stateKey = editingPack.stateKey.trim();
-        if (!stateKey) {
-            Modal.createDialog(ErrorDialog, {
-                title: _t("room_settings|stickers|missing_state_key_title"),
-                description: _t("room_settings|stickers|missing_state_key_description"),
-            });
-            return;
-        }
-
-        const images: Record<string, Record<string, unknown>> = {};
-        for (const image of editingPack.images) {
-            const key = image.key.trim();
-            const url = image.url.trim();
-            if (!key || !url) continue;
-            const usage: string[] = [];
-            if (image.usageSticker) usage.push("sticker");
-            if (image.usageEmoticon) usage.push("emoticon");
-            if (!usage.length) continue;
-            const entry: Record<string, unknown> = { url };
-            if (image.body.trim()) entry.body = image.body.trim();
-            if (usage.length === 1) entry.usage = usage;
-            if (image.info) entry.info = image.info;
-            images[key] = entry;
-        }
-
-        const packMeta: Record<string, unknown> = {};
-        if (editingPack.displayName.trim()) packMeta.display_name = editingPack.displayName.trim();
-        if (editingPack.attribution.trim()) packMeta.attribution = editingPack.attribution.trim();
-        if (editingPack.avatarUrl.trim()) packMeta.avatar_url = editingPack.avatarUrl.trim();
-
-        const content: Record<string, unknown> = {};
-        if (Object.keys(packMeta).length) content.pack = packMeta;
-        if (Object.keys(images).length) content.images = images;
-
-        setIsSaving(true);
-        try {
-            if (editingPack.originalStateKey && editingPack.originalStateKey !== stateKey) {
-                await room.client.sendStateEvent(room.roomId, ROOM_EMOTES_EVENT_TYPE, {}, editingPack.originalStateKey);
-            }
-            await room.client.sendStateEvent(room.roomId, ROOM_EMOTES_EVENT_TYPE, content, stateKey);
-            if (editingPack.originalStateKey && editingPack.originalStateKey !== stateKey) {
-                if (editingPack.originalEnabledGlobally) {
-                    await setGlobalEnabled(editingPack.originalStateKey, false);
-                }
-            }
-            await setGlobalEnabled(stateKey, editingPack.enableGlobally);
-            setEditingPack(null);
-        } catch (error) {
-            Modal.createDialog(ErrorDialog, {
-                title: _t("room_settings|stickers|save_error_title"),
-                description: _t("room_settings|stickers|save_error_description"),
-            });
-        } finally {
-            setIsSaving(false);
-        }
-    };
-
     const removePack = async (event: MatrixEvent): Promise<void> => {
         const stateKey = event.getStateKey() || "";
         const { finished } = Modal.createDialog(QuestionDialog, {
@@ -286,9 +163,6 @@ export const StickersRoomSettingsTab: React.FC<{ room: Room }> = ({ room }) => {
         try {
             await room.client.sendStateEvent(room.roomId, ROOM_EMOTES_EVENT_TYPE, {}, stateKey);
             await setGlobalEnabled(stateKey, false);
-            if (editingPack?.originalStateKey === stateKey) {
-                setEditingPack(null);
-            }
         } catch (error) {
             Modal.createDialog(ErrorDialog, {
                 title: _t("room_settings|stickers|delete_error_title"),
@@ -297,29 +171,44 @@ export const StickersRoomSettingsTab: React.FC<{ room: Room }> = ({ room }) => {
         }
     };
 
-    const updateEditingPack = (patch: Partial<EditablePack>): void => {
-        setEditingPack((current) => (current ? { ...current, ...patch } : current));
-    };
+    const exportPack = async (event: MatrixEvent, displayName: string): Promise<void> => {
+        try {
+            const content = event.getContent() ?? {};
+            const images = typeof content.images === "object" && content.images ? content.images : {};
+            const entries = Object.entries(images as Record<string, Record<string, unknown>>).sort(([a], [b]) =>
+                a.localeCompare(b),
+            );
+            const tar = new Tar();
 
-    const updateImage = (index: number, patch: Partial<EditableImage>): void => {
-        setEditingPack((current) => {
-            if (!current) return current;
-            const nextImages = [...current.images];
-            nextImages[index] = { ...nextImages[index], ...patch };
-            return { ...current, images: nextImages };
-        });
-    };
+            for (const [key, image] of entries) {
+                const url = getImageUrl(image);
+                if (!url) continue;
+                const http = mediaFromMxc(url).srcHttp;
+                if (!http) continue;
+                const response = await fetch(http);
+                if (!response.ok) continue;
+                const data = new Uint8Array(await response.arrayBuffer());
+                const ext = getExtensionForMime(response.headers.get("content-type"));
+                tar.append(`${key}.${ext}`, data);
+            }
 
-    const addImage = (): void => {
-        setEditingPack((current) => (current ? { ...current, images: [...current.images, emptyImage()] } : current));
-    };
+            const gzipped = pako.gzip(tar.out);
+            const blob = new Blob([gzipped], { type: "application/gzip" });
+            const filename = `${normalizeKey(displayName || "sticker-pack")}.tar.gz`;
 
-    const removeImage = (index: number): void => {
-        setEditingPack((current) => {
-            if (!current) return current;
-            const nextImages = current.images.filter((_, i) => i !== index);
-            return { ...current, images: nextImages.length ? nextImages : [emptyImage()] };
-        });
+            const link = document.createElement("a");
+            link.href = URL.createObjectURL(blob);
+            link.download = filename;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(link.href);
+        } catch (error) {
+            Modal.createDialog(ErrorDialog, {
+                title: _t("room_settings|stickers|export_error_title"),
+                description: _t("room_settings|stickers|export_error_description"),
+            });
+        }
     };
 
     return (
@@ -355,6 +244,12 @@ export const StickersRoomSettingsTab: React.FC<{ room: Room }> = ({ room }) => {
                                 />
                                 <AccessibleButton
                                     kind="secondary"
+                                    onClick={() => void exportPack(pack.event, pack.displayName)}
+                                >
+                                    {_t("room_settings|stickers|export_pack")}
+                                </AccessibleButton>
+                                <AccessibleButton
+                                    kind="secondary"
                                     disabled={!canEdit}
                                     onClick={() => startEditPack(pack.event)}
                                 >
@@ -380,115 +275,6 @@ export const StickersRoomSettingsTab: React.FC<{ room: Room }> = ({ room }) => {
                     </SettingsSubsectionText>
                 )}
             </SettingsSubsection>
-
-            {editingPack && (
-                <SettingsSubsection
-                    heading={_t("room_settings|stickers|editor_title")}
-                    description={_t("room_settings|stickers|editor_description")}
-                >
-                    <div className="mx_StickersRoomSettingsTab_editor">
-                        <div className="mx_StickersRoomSettingsTab_editorFields">
-                            <Field
-                                label={_t("room_settings|stickers|state_key")}
-                                value={editingPack.stateKey}
-                                onChange={(ev) =>
-                                    updateEditingPack({ stateKey: (ev.target as HTMLInputElement).value })
-                                }
-                            />
-                            <Field
-                                label={_t("room_settings|stickers|display_name")}
-                                value={editingPack.displayName}
-                                onChange={(ev) =>
-                                    updateEditingPack({ displayName: (ev.target as HTMLInputElement).value })
-                                }
-                            />
-                            <Field
-                                label={_t("room_settings|stickers|attribution")}
-                                value={editingPack.attribution}
-                                onChange={(ev) =>
-                                    updateEditingPack({ attribution: (ev.target as HTMLInputElement).value })
-                                }
-                            />
-                            <Field
-                                label={_t("room_settings|stickers|avatar_url")}
-                                value={editingPack.avatarUrl}
-                                onChange={(ev) =>
-                                    updateEditingPack({ avatarUrl: (ev.target as HTMLInputElement).value })
-                                }
-                            />
-                        </div>
-                        <LabelledCheckbox
-                            className="mx_StickersRoomSettingsTab_editorToggle"
-                            label={_t("room_settings|stickers|enable_global")}
-                            value={editingPack.enableGlobally}
-                            onChange={(checked) => updateEditingPack({ enableGlobally: checked })}
-                        />
-                        <div className="mx_StickersRoomSettingsTab_images">
-                            <div className="mx_StickersRoomSettingsTab_imagesHeader">
-                                {_t("room_settings|stickers|images_title")}
-                            </div>
-                            {editingPack.images.map((image, index) => (
-                                <div className="mx_StickersRoomSettingsTab_imageRow" key={`image_${index}`}>
-                                    <Field
-                                        label={_t("room_settings|stickers|image_key")}
-                                        value={image.key}
-                                        onChange={(ev) =>
-                                            updateImage(index, { key: (ev.target as HTMLInputElement).value })
-                                        }
-                                    />
-                                    <Field
-                                        label={_t("room_settings|stickers|image_url")}
-                                        value={image.url}
-                                        onChange={(ev) =>
-                                            updateImage(index, { url: (ev.target as HTMLInputElement).value })
-                                        }
-                                    />
-                                    <Field
-                                        label={_t("room_settings|stickers|image_body")}
-                                        value={image.body}
-                                        onChange={(ev) =>
-                                            updateImage(index, { body: (ev.target as HTMLInputElement).value })
-                                        }
-                                    />
-                                    <div className="mx_StickersRoomSettingsTab_imageUsage">
-                                        <LabelledCheckbox
-                                            label={_t("room_settings|stickers|usage_sticker")}
-                                            value={image.usageSticker}
-                                            onChange={(checked) => updateImage(index, { usageSticker: checked })}
-                                        />
-                                        <LabelledCheckbox
-                                            label={_t("room_settings|stickers|usage_emoticon")}
-                                            value={image.usageEmoticon}
-                                            onChange={(checked) => updateImage(index, { usageEmoticon: checked })}
-                                        />
-                                    </div>
-                                    <AccessibleButton
-                                        kind="danger_inline"
-                                        onClick={() => removeImage(index)}
-                                    >
-                                        {_t("action|remove")}
-                                    </AccessibleButton>
-                                </div>
-                            ))}
-                            <AccessibleButton kind="secondary" onClick={addImage}>
-                                {_t("room_settings|stickers|add_image")}
-                            </AccessibleButton>
-                        </div>
-                        <div className="mx_StickersRoomSettingsTab_editorActions">
-                            <AccessibleButton kind="primary" disabled={!canEdit || isSaving} onClick={saveEditingPack}>
-                                {_t("action|save")}
-                            </AccessibleButton>
-                            <AccessibleButton
-                                kind="secondary"
-                                disabled={isSaving}
-                                onClick={() => setEditingPack(null)}
-                            >
-                                {_t("action|cancel")}
-                            </AccessibleButton>
-                        </div>
-                    </div>
-                </SettingsSubsection>
-            )}
         </div>
     );
 };

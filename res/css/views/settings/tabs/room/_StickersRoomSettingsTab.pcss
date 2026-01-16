@@ -67,22 +67,70 @@
     font-weight: 600;
 }
 
-.mx_StickersRoomSettingsTab_imageRow {
+.mx_StickersRoomSettingsTab_usageTabs {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.mx_StickersRoomSettingsTab_cards {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
     gap: 12px;
-    align-items: start;
+}
+
+.mx_StickersRoomSettingsTab_card {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
     padding: 12px;
     border: 1px solid $header-panel-bg-hover;
-    border-radius: 8px;
+    border-radius: 10px;
     background: var(--cpd-color-bg-subtle-1);
 }
 
-.mx_StickersRoomSettingsTab_imageUsage {
+.mx_StickersRoomSettingsTab_cardImage {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 140px;
+    border-radius: 8px;
+    background: var(--cpd-color-bg-canvas);
+    overflow: hidden;
+}
+
+.mx_StickersRoomSettingsTab_cardImage img {
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+}
+
+.mx_StickersRoomSettingsTab_cardPlaceholder {
+    color: var(--cpd-color-text-secondary);
+    font-size: $font-12px;
+}
+
+.mx_StickersRoomSettingsTab_cardFields {
     display: flex;
     flex-direction: column;
-    gap: 6px;
-    padding-top: 8px;
+    gap: 8px;
+}
+
+.mx_StickersRoomSettingsTab_cardActions {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.mx_StickersRoomSettingsTab_uploadRow {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.mx_StickersRoomSettingsTab_uploadInput {
+    display: none;
 }
 
 .mx_StickersRoomSettingsTab_editorActions {
@@ -93,4 +141,10 @@
 .mx_StickersRoomSettingsTab_hint {
     margin-top: 8px;
     color: var(--cpd-color-text-secondary);
+}
+
+.mx_StickersPackEditorDialog_content {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
 }
