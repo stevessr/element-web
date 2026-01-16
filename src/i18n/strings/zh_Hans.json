@@ -1706,6 +1706,7 @@
             "add_pack": "添加贴纸包",
             "attribution": "归属",
             "avatar_url": "头像 URL (mxc://)",
+            "avatar_placeholder": "暂无头像",
             "delete_description": "是否从此房间中移除贴纸包 \"%(stateKey)s\"？",
             "delete_error_description": "我们无法移除此贴纸包。请重试。",
             "delete_error_title": "移除贴纸包失败",
@@ -1725,6 +1726,7 @@
             "import_error_description": "无法导入贴纸包，请检查压缩包格式。",
             "import_error_title": "导入失败",
             "import_pack": "导入贴纸包",
+            "import_progress": "正在导入 %(current)s/%(total)s…",
             "images_title": "图片",
             "list_description": "贴纸包按此房间、全局启用的包，然后是你的个人包的顺序显示。",
             "missing_state_key_description": "提供状态键以保存此贴纸包。",
@@ -1742,6 +1744,7 @@
             "unnamed": "未命名",
             "upload_error_description": "无法上传图片，请重试。",
             "upload_error_title": "上传失败",
+            "upload_avatar": "上传头像",
             "upload_images": "上传图片"
         },
         "delete_avatar_label": "删除头像",

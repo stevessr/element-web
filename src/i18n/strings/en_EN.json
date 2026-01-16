@@ -2282,6 +2282,7 @@
             "add_pack": "Add sticker pack",
             "attribution": "Attribution",
             "avatar_url": "Avatar URL (mxc://)",
+            "avatar_placeholder": "No avatar",
             "delete_description": "Remove sticker pack \"%(stateKey)s\" from this room?",
             "delete_error_description": "We couldn't remove this sticker pack. Please try again.",
             "delete_error_title": "Failed to remove sticker pack",
@@ -2301,6 +2302,7 @@
             "import_error_description": "We couldn't import that sticker pack. Please check the archive format.",
             "import_error_title": "Import failed",
             "import_pack": "Import pack",
+            "import_progress": "Importing %(current)s/%(total)s…",
             "images_title": "Images",
             "list_description": "Sticker packs are shown in order for this room, then globally enabled packs, then your personal pack.",
             "missing_state_key_description": "Provide a state key to save this sticker pack.",
@@ -2318,6 +2320,7 @@
             "unnamed": "Unnamed",
             "upload_error_description": "We couldn't upload that image. Please try again.",
             "upload_error_title": "Upload failed",
+            "upload_avatar": "Upload avatar",
             "upload_images": "Upload images"
         },
         "delete_avatar_label": "Delete avatar",

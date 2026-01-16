@@ -200,6 +200,8 @@ const StickersPackEditorDialog: React.FC<IProps> = ({ room, event, enabledGlobal
     const [activeUsage, setActiveUsage] = useState<"sticker" | "emoticon">("sticker");
     const [isSaving, setIsSaving] = useState(false);
     const [isUploading, setIsUploading] = useState(false);
+    const [importProgress, setImportProgress] = useState<{ current: number; total: number } | null>(null);
+    const avatarUploadRef = useRef<HTMLInputElement | null>(null);
     const uploadInputRef = useRef<HTMLInputElement | null>(null);
     const importInputRef = useRef<HTMLInputElement | null>(null);
 
@@ -284,12 +286,14 @@ const StickersPackEditorDialog: React.FC<IProps> = ({ room, event, enabledGlobal
     const handleImportArchive = async (file: File | null): Promise<void> => {
         if (!file) return;
         setIsUploading(true);
+        setImportProgress(null);
         try {
             const buffer = new Uint8Array(await file.arrayBuffer());
             const tarBytes = pako.ungzip(buffer);
             const entries = parseTar(tarBytes);
             const existingKeys = new Set(editingPack.images.map((image) => image.key));
             const nextImages = [...editingPack.images];
+            setImportProgress({ current: 0, total: entries.length });
 
             for (const entry of entries) {
                 const name = entry.name.split("/").pop() || "";
@@ -310,6 +314,9 @@ const StickersPackEditorDialog: React.FC<IProps> = ({ room, event, enabledGlobal
                     usageSticker: activeUsage === "sticker",
                     usageEmoticon: activeUsage === "emoticon",
                 });
+                setImportProgress((progress) =>
+                    progress ? { ...progress, current: Math.min(progress.current + 1, progress.total) } : progress,
+                );
             }
 
             setEditingPack((current) => ({ ...current, images: nextImages }));
@@ -320,6 +327,7 @@ const StickersPackEditorDialog: React.FC<IProps> = ({ room, event, enabledGlobal
             });
         } finally {
             setIsUploading(false);
+            setImportProgress(null);
             if (importInputRef.current) importInputRef.current.value = "";
         }
     };
@@ -403,11 +411,50 @@ const StickersPackEditorDialog: React.FC<IProps> = ({ room, event, enabledGlobal
                         value={editingPack.attribution}
                         onChange={(ev) => updateEditingPack({ attribution: (ev.target as HTMLInputElement).value })}
                     />
-                    <Field
-                        label={_t("room_settings|stickers|avatar_url")}
-                        value={editingPack.avatarUrl}
-                        onChange={(ev) => updateEditingPack({ avatarUrl: (ev.target as HTMLInputElement).value })}
-                    />
+                    <div className="mx_StickersPackEditorDialog_avatarRow">
+                        <div className="mx_StickersPackEditorDialog_avatarPreview">
+                            {editingPack.avatarUrl ? (
+                                <img
+                                    src={mediaFromMxc(editingPack.avatarUrl).getSquareThumbnailHttp(64) ?? undefined}
+                                    alt=""
+                                />
+                            ) : (
+                                <div className="mx_StickersPackEditorDialog_avatarPlaceholder">
+                                    {_t("room_settings|stickers|avatar_placeholder")}
+                                </div>
+                            )}
+                        </div>
+                        <input
+                            ref={avatarUploadRef}
+                            type="file"
+                            accept="image/*"
+                            className="mx_StickersRoomSettingsTab_uploadInput"
+                            onChange={async (ev) => {
+                                const file = ev.target.files?.[0];
+                                if (!file) return;
+                                setIsUploading(true);
+                                try {
+                                    const { content_uri: url } = await room.client.uploadContent(file);
+                                    updateEditingPack({ avatarUrl: url });
+                                } catch (error) {
+                                    Modal.createDialog(ErrorDialog, {
+                                        title: _t("room_settings|stickers|upload_error_title"),
+                                        description: _t("room_settings|stickers|upload_error_description"),
+                                    });
+                                } finally {
+                                    setIsUploading(false);
+                                    if (avatarUploadRef.current) avatarUploadRef.current.value = "";
+                                }
+                            }}
+                        />
+                        <AccessibleButton
+                            kind="secondary"
+                            disabled={isUploading}
+                            onClick={() => avatarUploadRef.current?.click()}
+                        >
+                            {_t("room_settings|stickers|upload_avatar")}
+                        </AccessibleButton>
+                    </div>
                 </div>
                 <LabelledCheckbox
                     className="mx_StickersRoomSettingsTab_editorToggle"
@@ -518,6 +565,14 @@ const StickersPackEditorDialog: React.FC<IProps> = ({ room, event, enabledGlobal
                         >
                             {_t("room_settings|stickers|import_pack")}
                         </AccessibleButton>
+                        {importProgress && (
+                            <div className="mx_StickersPackEditorDialog_importProgress">
+                                {_t("room_settings|stickers|import_progress", {
+                                    current: importProgress.current,
+                                    total: importProgress.total,
+                                })}
+                            </div>
+                        )}
                     </div>
                 </div>
                 <div className="mx_StickersRoomSettingsTab_editorActions">

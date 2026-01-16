@@ -148,3 +148,39 @@
     flex-direction: column;
     gap: 16px;
 }
+
+.mx_StickersPackEditorDialog_avatarRow {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.mx_StickersPackEditorDialog_avatarPreview {
+    width: 64px;
+    height: 64px;
+    border-radius: 12px;
+    overflow: hidden;
+    background: var(--cpd-color-bg-canvas);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.mx_StickersPackEditorDialog_avatarPreview img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.mx_StickersPackEditorDialog_avatarPlaceholder {
+    color: var(--cpd-color-text-secondary);
+    font-size: $font-12px;
+    text-align: center;
+    padding: 4px;
+}
+
+.mx_StickersPackEditorDialog_importProgress {
+    color: var(--cpd-color-text-secondary);
+    font-size: $font-12px;
+}
