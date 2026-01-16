@@ -2221,6 +2221,38 @@
             "empty": "This room isn't bridging messages to any platforms. <a>Learn more.</a>",
             "title": "Bridges"
         },
+        "stickers": {
+            "add_image": "Add image",
+            "add_pack": "Add sticker pack",
+            "attribution": "Attribution",
+            "avatar_url": "Avatar URL (mxc://)",
+            "delete_description": "Remove sticker pack \"%(stateKey)s\" from this room?",
+            "delete_error_description": "We couldn't remove this sticker pack. Please try again.",
+            "delete_error_title": "Failed to remove sticker pack",
+            "delete_title": "Remove sticker pack",
+            "description": "Manage sticker packs stored in this room.",
+            "display_name": "Display name",
+            "editor_description": "Edit the pack metadata and images, then save to publish to the room.",
+            "editor_title": "Edit sticker pack",
+            "empty": "No sticker packs have been added to this room yet.",
+            "enable_global": "Enable globally",
+            "image_body": "Tooltip text",
+            "image_key": "Image key",
+            "image_url": "Image URL (mxc://)",
+            "images_title": "Images",
+            "list_description": "Sticker packs are shown in order for this room, then globally enabled packs, then your personal pack.",
+            "missing_state_key_description": "Provide a state key to save this sticker pack.",
+            "missing_state_key_title": "State key required",
+            "no_permission": "You don't have permission to edit sticker packs in this room.",
+            "row_meta": "State key: %(stateKey)s · %(count)s images",
+            "save_error_description": "We couldn't save this sticker pack. Please try again.",
+            "save_error_title": "Failed to save sticker pack",
+            "state_key": "State key",
+            "title": "Stickers",
+            "unnamed": "Unnamed",
+            "usage_emoticon": "Use as emoticon",
+            "usage_sticker": "Use as sticker"
+        },
         "delete_avatar_label": "Delete avatar",
         "general": {
             "alias_field_has_domain_invalid": "Missing domain separator e.g. (:domain.org)",
@@ -3278,7 +3310,10 @@
     },
     "stickers": {
         "empty": "You don't currently have any stickerpacks enabled",
-        "empty_add_prompt": "Add some now"
+        "empty_add_prompt": "Add some now",
+        "global_enabled_section": "Enabled from other rooms",
+        "room_packs_section": "This room",
+        "user_packs_section": "Your stickers"
     },
     "terms": {
         "column_document": "Document",

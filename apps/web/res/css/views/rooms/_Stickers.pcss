@@ -7,6 +7,101 @@
     height: 300px;
 }
 
+.mx_Stickers_content_roomEmotes {
+    overflow: auto;
+    height: 100%;
+    padding: 8px 10px 12px;
+    box-sizing: border-box;
+}
+
+.mx_Stickers_section {
+    &:not(:last-child) {
+        margin-bottom: 12px;
+        padding-bottom: 8px;
+        border-bottom: 1px solid $header-panel-bg-hover;
+    }
+}
+
+.mx_Stickers_sectionTitle {
+    margin: 4px 2px 8px;
+    color: var(--cpd-color-text-secondary);
+    font-size: $font-11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+}
+
+.mx_Stickers_roomGroup {
+    &:not(:last-child) {
+        margin-bottom: 10px;
+    }
+}
+
+.mx_Stickers_roomHeader {
+    margin: 6px 2px 4px;
+    color: var(--cpd-color-text-secondary);
+    font-size: $font-12px;
+    font-weight: 600;
+}
+
+.mx_Stickers_pack {
+    &:not(:first-child) {
+        margin-top: 10px;
+    }
+}
+
+.mx_Stickers_packHeader {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 4px 2px 8px;
+    color: var(--cpd-color-text-secondary);
+    font-size: $font-12px;
+    font-weight: 500;
+}
+
+.mx_Stickers_packAvatar {
+    width: 24px;
+    height: 24px;
+    border-radius: 999px;
+}
+
+.mx_Stickers_packTitle {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.mx_Stickers_packGrid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(48px, 1fr));
+    gap: 8px;
+}
+
+.mx_Stickers_packItem {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 4px;
+    border-radius: 8px;
+    border: 1px solid transparent;
+    background: transparent;
+    cursor: pointer;
+
+    &:hover {
+        border-color: $header-panel-bg-hover;
+        background-color: $header-panel-bg-hover;
+    }
+}
+
+.mx_Stickers_packItemImage {
+    width: 100%;
+    height: 100%;
+    max-width: 64px;
+    max-height: 64px;
+    object-fit: contain;
+}
+
 #mx_persistedElement_stickerPicker {
     .mx_AppTileFullWidth {
         height: unset;

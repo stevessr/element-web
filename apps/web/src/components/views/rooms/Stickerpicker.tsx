@@ -6,13 +6,14 @@ Please see LICENSE files in the repository root for full details.
 */
 
 import React, { type JSX } from "react";
-import { type Room, ClientEvent } from "matrix-js-sdk/src/matrix";
+import { type Room, ClientEvent, RoomStateEvent, type MatrixEvent } from "matrix-js-sdk/src/matrix";
 import { logger } from "matrix-js-sdk/src/logger";
 import { type IWidget } from "matrix-widget-api";
 
 import { _t, _td } from "../../../languageHandler";
 import AppTile from "../elements/AppTile";
 import { MatrixClientPeg } from "../../../MatrixClientPeg";
+import { mediaFromMxc } from "../../../customisations/Media";
 import dis from "../../../dispatcher/dispatcher";
 import AccessibleButton from "../elements/AccessibleButton";
 import WidgetUtils, { type UserWidget } from "../../../utils/WidgetUtils";
@@ -26,6 +27,15 @@ import type ScalarAuthClient from "../../../ScalarAuthClient";
 import GenericElementContextMenu from "../context_menus/GenericElementContextMenu";
 import RightPanelStore from "../../../stores/right-panel/RightPanelStore";
 import { UPDATE_EVENT } from "../../../stores/AsyncStore";
+import {
+    EMOTE_ROOMS_EVENT_TYPE,
+    USER_EMOTES_EVENT_TYPE,
+    getEnabledRoomEmotePacks,
+    getRoomEmotePacks,
+    getUserEmotePack,
+    type RoomEmotePack,
+} from "../../../utils/RoomEmotes";
+import ContentMessages from "../../../ContentMessages";
 
 // This should be below the dialog level (4000), but above the rest of the UI (1000-2000).
 // We sit in a context menu, so this should be given to the context menu.
@@ -130,6 +140,8 @@ export default class Stickerpicker extends React.PureComponent<IProps, IState> {
 
         // Track updates to widget state in account data
         MatrixClientPeg.safeGet().on(ClientEvent.AccountData, this.updateWidget);
+        MatrixClientPeg.safeGet().on(ClientEvent.AccountData, this.onAccountData);
+        this.props.room.currentState.on(RoomStateEvent.Update, this.onRoomStateUpdate);
 
         RightPanelStore.instance.on(UPDATE_EVENT, this.onRightPanelStoreUpdate);
         // Initialise widget state from current account data
@@ -139,6 +151,8 @@ export default class Stickerpicker extends React.PureComponent<IProps, IState> {
     public componentWillUnmount(): void {
         const client = MatrixClientPeg.get();
         if (client) client.removeListener(ClientEvent.AccountData, this.updateWidget);
+        if (client) client.removeListener(ClientEvent.AccountData, this.onAccountData);
+        this.props.room.currentState.off(RoomStateEvent.Update, this.onRoomStateUpdate);
         RightPanelStore.instance.off(UPDATE_EVENT, this.onRightPanelStoreUpdate);
         window.removeEventListener("resize", this.onResize);
         dis.unregister(this.dispatcherRef);
@@ -199,6 +213,16 @@ export default class Stickerpicker extends React.PureComponent<IProps, IState> {
         this.props.setStickerPickerOpen(false);
     };
 
+    private onAccountData = (event: MatrixEvent): void => {
+        if (event.getType() === EMOTE_ROOMS_EVENT_TYPE || event.getType() === USER_EMOTES_EVENT_TYPE) {
+            this.forceUpdate();
+        }
+    };
+
+    private onRoomStateUpdate = (): void => {
+        this.forceUpdate();
+    };
+
     private defaultStickerpickerContent(): JSX.Element {
         // eslint-disable-next-line @typescript-eslint/no-require-imports
         const imgSrc = require("../../../../res/img/stickerpack-placeholder.png");
@@ -208,6 +232,88 @@ export default class Stickerpicker extends React.PureComponent<IProps, IState> {
                 <p className="mx_Stickers_addLink">{_t("stickers|empty_add_prompt")}</p>
                 <img src={imgSrc} alt="" />
             </AccessibleButton>
+        );
+    }
+
+    private renderRoomEmotePack = (pack: RoomEmotePack, keyPrefix: string): JSX.Element => {
+        return (
+            <div className="mx_Stickers_pack" key={`${keyPrefix}_${pack.id}`}>
+                <div className="mx_Stickers_packHeader">
+                    {pack.avatarUrl ? (
+                        <img
+                            className="mx_Stickers_packAvatar"
+                            alt=""
+                            src={mediaFromMxc(pack.avatarUrl).getSquareThumbnailHttp(24) ?? undefined}
+                        />
+                    ) : null}
+                    <span className="mx_Stickers_packTitle">{pack.displayName || _t("common|stickerpack")}</span>
+                </div>
+                <div className="mx_Stickers_packGrid">
+                    {pack.images.map((image) => (
+                        <button
+                            type="button"
+                            key={`${keyPrefix}_${pack.id}_${image.key}`}
+                            className="mx_Stickers_packItem"
+                            title={image.body}
+                            onClick={() => {
+                                ContentMessages.sharedInstance().sendStickerContentToRoom(
+                                    image.url,
+                                    this.props.room.roomId,
+                                    this.props.threadId ?? null,
+                                    image.info ?? {},
+                                    image.body,
+                                    this.props.room.client,
+                                );
+                                this.props.setStickerPickerOpen(false);
+                            }}
+                        >
+                            <img
+                                className="mx_Stickers_packItemImage"
+                                alt={image.body}
+                                src={mediaFromMxc(image.url).getThumbnailOfSourceHttp(96, 96, "scale") ?? undefined}
+                            />
+                        </button>
+                    ))}
+                </div>
+            </div>
+        );
+    };
+
+    private getRoomEmotePacksContent(): JSX.Element | null {
+        const roomPacks = getRoomEmotePacks(this.props.room, "sticker");
+        const enabledRoomPacks = getEnabledRoomEmotePacks(MatrixClientPeg.safeGet(), this.props.room, "sticker");
+        const userPack = getUserEmotePack(MatrixClientPeg.safeGet(), "sticker");
+
+        if (!roomPacks.length && !enabledRoomPacks.length && !userPack) return null;
+
+        return (
+            <div className="mx_Stickers_content_container">
+                <div className="mx_Stickers_content mx_Stickers_content_roomEmotes">
+                    {roomPacks.length > 0 && (
+                        <div className="mx_Stickers_section">
+                            <div className="mx_Stickers_sectionTitle">{_t("stickers|room_packs_section")}</div>
+                            {roomPacks.map((pack) => this.renderRoomEmotePack(pack, "room"))}
+                        </div>
+                    )}
+                    {enabledRoomPacks.length > 0 && (
+                        <div className="mx_Stickers_section">
+                            <div className="mx_Stickers_sectionTitle">{_t("stickers|global_enabled_section")}</div>
+                            {enabledRoomPacks.map(({ room, packs }) => (
+                                <div className="mx_Stickers_roomGroup" key={`global_${room.roomId}`}>
+                                    <div className="mx_Stickers_roomHeader">{room.name || room.roomId}</div>
+                                    {packs.map((pack) => this.renderRoomEmotePack(pack, room.roomId))}
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                    {userPack && (
+                        <div className="mx_Stickers_section">
+                            <div className="mx_Stickers_sectionTitle">{_t("stickers|user_packs_section")}</div>
+                            {this.renderRoomEmotePack(userPack, "user")}
+                        </div>
+                    )}
+                </div>
+            </div>
         );
     }
 
@@ -300,8 +406,7 @@ export default class Stickerpicker extends React.PureComponent<IProps, IState> {
                 </div>
             );
         } else {
-            // Default content to show if stickerpicker widget not added
-            stickersContent = this.defaultStickerpickerContent();
+            stickersContent = this.getRoomEmotePacksContent() ?? this.defaultStickerpickerContent();
         }
         return stickersContent;
     }

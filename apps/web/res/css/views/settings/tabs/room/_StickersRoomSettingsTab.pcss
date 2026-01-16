@@ -1,0 +1,96 @@
+.mx_StickersRoomSettingsTab_list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin: 12px 0 16px;
+}
+
+.mx_StickersRoomSettingsTab_empty {
+    color: var(--cpd-color-text-secondary);
+    padding: 8px 0;
+}
+
+.mx_StickersRoomSettingsTab_row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 12px;
+    border: 1px solid $header-panel-bg-hover;
+    border-radius: 8px;
+    background: var(--cpd-color-bg-subtle-1);
+}
+
+.mx_StickersRoomSettingsTab_rowInfo {
+    min-width: 0;
+}
+
+.mx_StickersRoomSettingsTab_rowTitle {
+    font-weight: 600;
+}
+
+.mx_StickersRoomSettingsTab_rowMeta {
+    color: var(--cpd-color-text-secondary);
+    font-size: $font-12px;
+}
+
+.mx_StickersRoomSettingsTab_rowActions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.mx_StickersRoomSettingsTab_rowToggle {
+    margin-right: 8px;
+}
+
+.mx_StickersRoomSettingsTab_editor {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.mx_StickersRoomSettingsTab_editorFields {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 12px;
+}
+
+.mx_StickersRoomSettingsTab_images {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.mx_StickersRoomSettingsTab_imagesHeader {
+    font-weight: 600;
+}
+
+.mx_StickersRoomSettingsTab_imageRow {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 12px;
+    align-items: start;
+    padding: 12px;
+    border: 1px solid $header-panel-bg-hover;
+    border-radius: 8px;
+    background: var(--cpd-color-bg-subtle-1);
+}
+
+.mx_StickersRoomSettingsTab_imageUsage {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding-top: 8px;
+}
+
+.mx_StickersRoomSettingsTab_editorActions {
+    display: flex;
+    gap: 12px;
+}
+
+.mx_StickersRoomSettingsTab_hint {
+    margin-top: 8px;
+    color: var(--cpd-color-text-secondary);
+}
