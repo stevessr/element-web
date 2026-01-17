@@ -60,7 +60,6 @@ interface IState {
     stickerpickerWidget: UserWidget | null;
     widgetId: string | null;
     filterQuery: string;
-    groupFilter: "all" | "room" | "global" | "user";
     packFilter: string;
 }
 
@@ -88,7 +87,6 @@ export default class Stickerpicker extends React.PureComponent<IProps, IState> {
             stickerpickerWidget: null,
             widgetId: null,
             filterQuery: "",
-            groupFilter: "all",
             packFilter: "all",
         };
     }
@@ -303,95 +301,23 @@ export default class Stickerpicker extends React.PureComponent<IProps, IState> {
         this.setState({ filterQuery: "" });
     };
 
-    private setGroupFilter = (groupFilter: IState["groupFilter"]): void => {
-        this.setState({ groupFilter, packFilter: "all" });
-    };
-
     private setPackFilter = (packFilter: string): void => {
         this.setState({
             packFilter,
-            groupFilter: packFilter === "all" ? this.state.groupFilter : "all",
         });
     };
 
     private renderFilters(packOptions: Array<{ id: string; label: string }>): JSX.Element {
-        const { filterQuery, groupFilter, packFilter } = this.state;
+        const { filterQuery, packFilter } = this.state;
 
         return (
             <div className="mx_Stickers_filters">
-                <div className="mx_Stickers_searchRow">
-                    <input
-                        className="mx_Stickers_searchInput"
-                        type="text"
-                        value={filterQuery}
-                        onChange={this.onSearchChange}
-                        placeholder={_t("stickers|search_placeholder")}
-                        aria-label={_t("stickers|search_placeholder")}
-                    />
-                    {filterQuery && (
-                        <AccessibleButton
-                            className="mx_Stickers_searchClear"
-                            onClick={this.onClearSearch}
-                            title={_t("action|clear")}
-                        >
-                            x
-                        </AccessibleButton>
-                    )}
-                </div>
                 <div className="mx_Stickers_filterRow">
-                    <AccessibleButton
-                        className={
-                            groupFilter === "all"
-                                ? "mx_Stickers_filterButton mx_Stickers_filterButton_active"
-                                : "mx_Stickers_filterButton"
-                        }
-                        onClick={() => this.setGroupFilter("all")}
-                        aria-pressed={groupFilter === "all"}
-                    >
-                        {_t("stickers|filter_all")}
-                    </AccessibleButton>
-                    <AccessibleButton
-                        className={
-                            groupFilter === "room"
-                                ? "mx_Stickers_filterButton mx_Stickers_filterButton_active"
-                                : "mx_Stickers_filterButton"
-                        }
-                        onClick={() => this.setGroupFilter("room")}
-                        aria-pressed={groupFilter === "room"}
-                    >
-                        {_t("stickers|filter_room")}
-                    </AccessibleButton>
-                    <AccessibleButton
-                        className={
-                            groupFilter === "global"
-                                ? "mx_Stickers_filterButton mx_Stickers_filterButton_active"
-                                : "mx_Stickers_filterButton"
-                        }
-                        onClick={() => this.setGroupFilter("global")}
-                        aria-pressed={groupFilter === "global"}
-                    >
-                        {_t("stickers|filter_global")}
-                    </AccessibleButton>
-                    <AccessibleButton
-                        className={
-                            groupFilter === "user"
-                                ? "mx_Stickers_filterButton mx_Stickers_filterButton_active"
-                                : "mx_Stickers_filterButton"
-                        }
-                        onClick={() => this.setGroupFilter("user")}
-                        aria-pressed={groupFilter === "user"}
-                    >
-                        {_t("stickers|filter_user")}
-                    </AccessibleButton>
-                </div>
-                <div className="mx_Stickers_packFilterRow">
-                    <label className="mx_Stickers_packFilterLabel">
-                        {_t("stickers|filter_pack_label")}
-                    </label>
                     <select
                         className="mx_Stickers_packSelect"
                         value={packFilter}
                         onChange={(ev) => this.setPackFilter(ev.target.value)}
+                        aria-label={_t("stickers|filter_pack_label")}
                     >
                         <option value="all">{_t("stickers|filter_pack_all")}</option>
                         {packOptions.map((pack) => (
@@ -400,6 +326,25 @@ export default class Stickerpicker extends React.PureComponent<IProps, IState> {
                             </option>
                         ))}
                     </select>
+                    <div className="mx_Stickers_search">
+                        <input
+                            className="mx_Stickers_searchInput"
+                            type="text"
+                            value={filterQuery}
+                            onChange={this.onSearchChange}
+                            placeholder={_t("stickers|search_placeholder")}
+                            aria-label={_t("stickers|search_placeholder")}
+                        />
+                        {filterQuery && (
+                            <AccessibleButton
+                                className="mx_Stickers_searchClear"
+                                onClick={this.onClearSearch}
+                                title={_t("action|clear")}
+                            >
+                                x
+                            </AccessibleButton>
+                        )}
+                    </div>
                 </div>
             </div>
         );
@@ -412,7 +357,7 @@ export default class Stickerpicker extends React.PureComponent<IProps, IState> {
 
         if (!roomPacks.length && !enabledRoomPacks.length && !userPack) return null;
 
-        const { filterQuery, groupFilter, packFilter } = this.state;
+        const { filterQuery, packFilter } = this.state;
         const query = filterQuery.trim().toLowerCase();
         const matchesQuery = (value?: string): boolean => !!query && !!value && value.toLowerCase().includes(query);
 
@@ -426,8 +371,6 @@ export default class Stickerpicker extends React.PureComponent<IProps, IState> {
         ): RoomEmotePack | null => {
             const packId = `${section}:${pack.id}`;
             if (packFilter !== "all" && packFilter !== packId) return null;
-            if (groupFilter !== "all" && groupFilter !== section) return null;
-
             const packMatches =
                 matchesQuery(buildPackLabel(pack)) || matchesQuery(pack.stateKey) || matchesQuery(roomName);
             const images = query
@@ -475,34 +418,38 @@ export default class Stickerpicker extends React.PureComponent<IProps, IState> {
 
         return (
             <div className="mx_Stickers_content_container">
-                <div className="mx_Stickers_content mx_Stickers_content_roomEmotes">
-                    {this.renderFilters(packOptions)}
-                    {!hasResults && (
-                        <div className="mx_Stickers_emptyResults">{_t("stickers|search_empty")}</div>
-                    )}
-                    {filteredRoomPacks.length > 0 && (
-                        <div className="mx_Stickers_section">
-                            <div className="mx_Stickers_sectionTitle">{_t("stickers|room_packs_section")}</div>
-                            {filteredRoomPacks.map((pack) => this.renderRoomEmotePack(pack, "room"))}
-                        </div>
-                    )}
-                    {filteredEnabledPacks.length > 0 && (
-                        <div className="mx_Stickers_section">
-                            <div className="mx_Stickers_sectionTitle">{_t("stickers|global_enabled_section")}</div>
-                            {filteredEnabledPacks.map(({ room, packs }) => (
-                                <div className="mx_Stickers_roomGroup" key={`global_${room.roomId}`}>
-                                    <div className="mx_Stickers_roomHeader">{room.name || room.roomId}</div>
-                                    {packs.map((pack) => this.renderRoomEmotePack(pack, room.roomId))}
+                <div className="mx_Stickers_panel">
+                    <div className="mx_Stickers_header">{this.renderFilters(packOptions)}</div>
+                    <div className="mx_Stickers_body mx_Stickers_content_roomEmotes">
+                        {!hasResults && (
+                            <div className="mx_Stickers_emptyResults">{_t("stickers|search_empty")}</div>
+                        )}
+                        {filteredRoomPacks.length > 0 && (
+                            <div className="mx_Stickers_section">
+                                <div className="mx_Stickers_sectionTitle">{_t("stickers|room_packs_section")}</div>
+                                {filteredRoomPacks.map((pack) => this.renderRoomEmotePack(pack, "room"))}
+                            </div>
+                        )}
+                        {filteredEnabledPacks.length > 0 && (
+                            <div className="mx_Stickers_section">
+                                <div className="mx_Stickers_sectionTitle">
+                                    {_t("stickers|global_enabled_section")}
                                 </div>
-                            ))}
-                        </div>
-                    )}
-                    {filteredUserPack && (
-                        <div className="mx_Stickers_section">
-                            <div className="mx_Stickers_sectionTitle">{_t("stickers|user_packs_section")}</div>
-                            {this.renderRoomEmotePack(filteredUserPack, "user")}
-                        </div>
-                    )}
+                                {filteredEnabledPacks.map(({ room, packs }) => (
+                                    <div className="mx_Stickers_roomGroup" key={`global_${room.roomId}`}>
+                                        <div className="mx_Stickers_roomHeader">{room.name || room.roomId}</div>
+                                        {packs.map((pack) => this.renderRoomEmotePack(pack, room.roomId))}
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                        {filteredUserPack && (
+                            <div className="mx_Stickers_section">
+                                <div className="mx_Stickers_sectionTitle">{_t("stickers|user_packs_section")}</div>
+                                {this.renderRoomEmotePack(filteredUserPack, "user")}
+                            </div>
+                        )}
+                    </div>
                 </div>
             </div>
         );

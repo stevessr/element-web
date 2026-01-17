@@ -7,6 +7,30 @@
     height: 300px;
 }
 
+.mx_Stickers_content_container .mx_ContextualMenu_wrapper {
+    width: 340px;
+    height: min(450px, 80vh);
+    max-height: 80vh;
+    border-radius: 4px;
+}
+
+.mx_Stickers_panel {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    border-radius: 4px;
+}
+
+.mx_Stickers_header {
+    border-bottom: 1px solid $message-action-bar-border-color;
+    padding: 4px 8px 0;
+}
+
+.mx_Stickers_body {
+    flex: 1 1 auto;
+    overflow: auto;
+}
+
 .mx_Stickers_content_roomEmotes {
     overflow: auto;
     height: 100%;
@@ -26,77 +50,56 @@
     display: flex;
     flex-direction: column;
     gap: 8px;
-    margin-bottom: 10px;
-}
-
-.mx_Stickers_searchRow {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-}
-
-.mx_Stickers_searchInput {
-    flex: 1 1 auto;
-    font-size: $font-12px;
-    padding: 6px 8px;
-    border-radius: 6px;
-    border: 1px solid $input-border-color;
-    background-color: $background;
-    color: $primary-content;
-}
-
-.mx_Stickers_searchClear {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    padding: 4px 6px;
-    border-radius: 6px;
-    border: 1px solid $input-border-color;
-    background-color: $background;
-    color: $muted-fg-color;
 }
 
 .mx_Stickers_filterRow {
     display: flex;
-    flex-wrap: wrap;
-    gap: 6px;
-}
-
-.mx_Stickers_filterButton {
-    font-size: $font-11px;
-    padding: 4px 8px;
-    border-radius: 999px;
-    border: 1px solid $input-border-color;
-    background: transparent;
-    color: $muted-fg-color;
-}
-
-.mx_Stickers_filterButton_active {
-    border-color: $header-panel-bg-hover;
-    background-color: $header-panel-bg-hover;
-    color: $primary-content;
-}
-
-.mx_Stickers_packFilterRow {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-}
-
-.mx_Stickers_packFilterLabel {
-    font-size: $font-11px;
-    color: var(--cpd-color-text-secondary);
-    white-space: nowrap;
+    flex-direction: column;
+    gap: 8px;
 }
 
 .mx_Stickers_packSelect {
     flex: 1 1 auto;
     font-size: $font-12px;
-    padding: 6px 8px;
-    border-radius: 6px;
+    padding: 8px 12px;
+    border-radius: 4px;
     border: 1px solid $input-border-color;
     background-color: $background;
     color: $primary-content;
+}
+
+.mx_Stickers_search {
+    margin: 0;
+    border-radius: 4px;
+    border: 1px solid $input-border-color;
+    background-color: $background;
+    display: flex;
+
+    .mx_Stickers_searchInput {
+        flex: 1;
+        border: none;
+        padding: 8px 12px;
+        border-radius: 4px 0 0 4px;
+        font-size: $font-12px;
+        background: transparent;
+        color: $primary-content;
+
+        &::placeholder {
+            color: var(--cpd-color-text-secondary);
+        }
+    }
+
+    .mx_Stickers_searchClear {
+        border: none;
+        background-color: inherit;
+        margin: 0;
+        padding: 8px;
+        align-self: center;
+        width: 32px;
+        height: 32px;
+        cursor: pointer;
+        color: $muted-fg-color;
+    }
 }
 
 .mx_Stickers_emptyResults {
