@@ -2769,7 +2769,18 @@
     },
     "stickers": {
         "empty": "您目前沒有啟用任何貼圖包",
-        "empty_add_prompt": "現在新增一些嗎"
+        "empty_add_prompt": "現在新增一些嗎",
+        "filter_all": "全部",
+        "filter_global": "已啟用",
+        "filter_pack_all": "全部貼圖包",
+        "filter_pack_label": "貼圖包",
+        "filter_room": "聊天室",
+        "filter_user": "我的",
+        "global_enabled_section": "其他聊天室啟用",
+        "room_packs_section": "本聊天室",
+        "search_empty": "沒有符合的貼圖",
+        "search_placeholder": "搜尋貼圖",
+        "user_packs_section": "你的貼圖"
     },
     "terms": {
         "column_document": "文件",
@@ -3051,6 +3062,14 @@
         "pending_moderation_reason": "待審核的訊息：%(reason)s",
         "reactions": {
             "add_reaction_prompt": "新增反應",
+            "custom_emoji_action": "貼紙反應",
+            "custom_emoji_dialog_title": "自訂表情",
+            "custom_emoji_dialog_description": "輸入自訂表情或 MXC URI 作為反應。",
+            "custom_emoji_dialog_placeholder": "例如：😀 或 mxc://example.org/abc",
+            "custom_text_action": "自訂文字",
+            "custom_text_dialog_title": "自訂文字",
+            "custom_text_dialog_description": "輸入自訂文字作為反應。",
+            "custom_text_dialog_placeholder": "例如：已閱",
             "label": "%(reactors)s 使用了 %(content)s 反應"
         },
         "read_receipt_title": {

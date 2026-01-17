@@ -3325,8 +3325,16 @@
     "stickers": {
         "empty": "You don't currently have any stickerpacks enabled",
         "empty_add_prompt": "Add some now",
+        "filter_all": "All",
+        "filter_global": "Enabled",
+        "filter_pack_all": "All packs",
+        "filter_pack_label": "Pack",
+        "filter_room": "Room",
+        "filter_user": "Yours",
         "global_enabled_section": "Enabled from other rooms",
         "room_packs_section": "This room",
+        "search_empty": "No matching stickers",
+        "search_placeholder": "Search stickers",
         "user_packs_section": "Your stickers"
     },
     "terms": {
@@ -3631,6 +3639,11 @@
         "pending_moderation_reason": "Message pending moderation: %(reason)s",
         "reactions": {
             "add_reaction_prompt": "Add reaction",
+            "custom_emoji_action": "Sticker reaction",
+            "custom_text_action": "Custom text",
+            "custom_text_dialog_title": "Custom text",
+            "custom_text_dialog_description": "Enter a custom text reaction.",
+            "custom_text_dialog_placeholder": "e.g. Acknowledged",
             "custom_reaction_fallback_label": "Custom reaction",
             "label": "%(reactors)s reacted with %(content)s",
             "tooltip_caption": "reacted with %(shortName)s"

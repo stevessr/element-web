@@ -2512,8 +2512,16 @@
     "stickers": {
         "empty": "你目前未启用任何贴纸包",
         "empty_add_prompt": "立即添加",
+        "filter_all": "全部",
+        "filter_global": "已启用",
+        "filter_pack_all": "全部贴纸包",
+        "filter_pack_label": "贴纸包",
+        "filter_room": "房间",
+        "filter_user": "我的",
         "global_enabled_section": "其他房间启用",
         "room_packs_section": "本房间",
+        "search_empty": "没有匹配的贴纸",
+        "search_placeholder": "搜索贴纸",
         "user_packs_section": "你的贴纸"
     },
     "terms": {
@@ -2788,6 +2796,14 @@
         "pending_moderation_reason": "消息待审核：%(reason)s",
         "reactions": {
             "add_reaction_prompt": "添加反应",
+            "custom_emoji_action": "贴纸反应",
+            "custom_emoji_dialog_title": "自定义表情",
+            "custom_emoji_dialog_description": "输入一个自定义表情或 MXC URI 作为反应。",
+            "custom_emoji_dialog_placeholder": "例如：😀 或 mxc://example.org/abc",
+            "custom_text_action": "自定义文字",
+            "custom_text_dialog_title": "自定义文字",
+            "custom_text_dialog_description": "输入自定义文字作为反应。",
+            "custom_text_dialog_placeholder": "例如：已阅",
             "label": "%(reactors)s 做出了%(content)s 的反应"
         },
         "read_receipt_title": {

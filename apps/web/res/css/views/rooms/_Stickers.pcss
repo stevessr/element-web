@@ -22,6 +22,89 @@
     }
 }
 
+.mx_Stickers_filters {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-bottom: 10px;
+}
+
+.mx_Stickers_searchRow {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.mx_Stickers_searchInput {
+    flex: 1 1 auto;
+    font-size: $font-12px;
+    padding: 6px 8px;
+    border-radius: 6px;
+    border: 1px solid $input-border-color;
+    background-color: $background;
+    color: $primary-content;
+}
+
+.mx_Stickers_searchClear {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 4px 6px;
+    border-radius: 6px;
+    border: 1px solid $input-border-color;
+    background-color: $background;
+    color: $muted-fg-color;
+}
+
+.mx_Stickers_filterRow {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.mx_Stickers_filterButton {
+    font-size: $font-11px;
+    padding: 4px 8px;
+    border-radius: 999px;
+    border: 1px solid $input-border-color;
+    background: transparent;
+    color: $muted-fg-color;
+}
+
+.mx_Stickers_filterButton_active {
+    border-color: $header-panel-bg-hover;
+    background-color: $header-panel-bg-hover;
+    color: $primary-content;
+}
+
+.mx_Stickers_packFilterRow {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.mx_Stickers_packFilterLabel {
+    font-size: $font-11px;
+    color: var(--cpd-color-text-secondary);
+    white-space: nowrap;
+}
+
+.mx_Stickers_packSelect {
+    flex: 1 1 auto;
+    font-size: $font-12px;
+    padding: 6px 8px;
+    border-radius: 6px;
+    border: 1px solid $input-border-color;
+    background-color: $background;
+    color: $primary-content;
+}
+
+.mx_Stickers_emptyResults {
+    margin: 6px 2px;
+    font-size: $font-12px;
+    color: $muted-fg-color;
+}
+
 .mx_Stickers_sectionTitle {
     margin: 4px 2px 8px;
     color: var(--cpd-color-text-secondary);

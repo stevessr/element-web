@@ -5,7 +5,7 @@ SPDX-License-Identifier: AGPL-3.0-only OR GPL-3.0-only OR LicenseRef-Element-Com
 Please see LICENSE files in the repository root for full details.
 */
 
-import React, { type JSX } from "react";
+import React, { type ChangeEvent, type JSX } from "react";
 import { type Room, ClientEvent, RoomStateEvent, type MatrixEvent } from "matrix-js-sdk/src/matrix";
 import { logger } from "matrix-js-sdk/src/logger";
 import { type IWidget } from "matrix-widget-api";
@@ -34,6 +34,7 @@ import {
     getRoomEmotePacks,
     getUserEmotePack,
     type RoomEmotePack,
+    type RoomEmoteImage,
 } from "../../../utils/RoomEmotes";
 import ContentMessages from "../../../ContentMessages";
 
@@ -50,17 +51,23 @@ interface IProps {
     isStickerPickerOpen: boolean;
     menuPosition?: any;
     setStickerPickerOpen: (isStickerPickerOpen: boolean) => void;
+    mode?: "sticker" | "reaction";
+    onPickSticker?: (image: RoomEmoteImage) => void;
 }
 
 interface IState {
     imError: string | null;
     stickerpickerWidget: UserWidget | null;
     widgetId: string | null;
+    filterQuery: string;
+    groupFilter: "all" | "room" | "global" | "user";
+    packFilter: string;
 }
 
 export default class Stickerpicker extends React.PureComponent<IProps, IState> {
     public static defaultProps: Partial<IProps> = {
         threadId: null,
+        mode: "sticker",
     };
 
     public static currentWidget?: UserWidget;
@@ -80,6 +87,9 @@ export default class Stickerpicker extends React.PureComponent<IProps, IState> {
             imError: null,
             stickerpickerWidget: null,
             widgetId: null,
+            filterQuery: "",
+            groupFilter: "all",
+            packFilter: "all",
         };
     }
 
@@ -256,6 +266,12 @@ export default class Stickerpicker extends React.PureComponent<IProps, IState> {
                             className="mx_Stickers_packItem"
                             title={image.body}
                             onClick={() => {
+                                if (this.props.mode === "reaction") {
+                                    this.props.onPickSticker?.(image);
+                                    this.props.setStickerPickerOpen(false);
+                                    return;
+                                }
+
                                 ContentMessages.sharedInstance().sendStickerContentToRoom(
                                     image.url,
                                     this.props.room.roomId,
@@ -279,6 +295,116 @@ export default class Stickerpicker extends React.PureComponent<IProps, IState> {
         );
     };
 
+    private onSearchChange = (ev: ChangeEvent<HTMLInputElement>): void => {
+        this.setState({ filterQuery: ev.target.value });
+    };
+
+    private onClearSearch = (): void => {
+        this.setState({ filterQuery: "" });
+    };
+
+    private setGroupFilter = (groupFilter: IState["groupFilter"]): void => {
+        this.setState({ groupFilter, packFilter: "all" });
+    };
+
+    private setPackFilter = (packFilter: string): void => {
+        this.setState({
+            packFilter,
+            groupFilter: packFilter === "all" ? this.state.groupFilter : "all",
+        });
+    };
+
+    private renderFilters(packOptions: Array<{ id: string; label: string }>): JSX.Element {
+        const { filterQuery, groupFilter, packFilter } = this.state;
+
+        return (
+            <div className="mx_Stickers_filters">
+                <div className="mx_Stickers_searchRow">
+                    <input
+                        className="mx_Stickers_searchInput"
+                        type="text"
+                        value={filterQuery}
+                        onChange={this.onSearchChange}
+                        placeholder={_t("stickers|search_placeholder")}
+                        aria-label={_t("stickers|search_placeholder")}
+                    />
+                    {filterQuery && (
+                        <AccessibleButton
+                            className="mx_Stickers_searchClear"
+                            onClick={this.onClearSearch}
+                            title={_t("action|clear")}
+                        >
+                            x
+                        </AccessibleButton>
+                    )}
+                </div>
+                <div className="mx_Stickers_filterRow">
+                    <AccessibleButton
+                        className={
+                            groupFilter === "all"
+                                ? "mx_Stickers_filterButton mx_Stickers_filterButton_active"
+                                : "mx_Stickers_filterButton"
+                        }
+                        onClick={() => this.setGroupFilter("all")}
+                        aria-pressed={groupFilter === "all"}
+                    >
+                        {_t("stickers|filter_all")}
+                    </AccessibleButton>
+                    <AccessibleButton
+                        className={
+                            groupFilter === "room"
+                                ? "mx_Stickers_filterButton mx_Stickers_filterButton_active"
+                                : "mx_Stickers_filterButton"
+                        }
+                        onClick={() => this.setGroupFilter("room")}
+                        aria-pressed={groupFilter === "room"}
+                    >
+                        {_t("stickers|filter_room")}
+                    </AccessibleButton>
+                    <AccessibleButton
+                        className={
+                            groupFilter === "global"
+                                ? "mx_Stickers_filterButton mx_Stickers_filterButton_active"
+                                : "mx_Stickers_filterButton"
+                        }
+                        onClick={() => this.setGroupFilter("global")}
+                        aria-pressed={groupFilter === "global"}
+                    >
+                        {_t("stickers|filter_global")}
+                    </AccessibleButton>
+                    <AccessibleButton
+                        className={
+                            groupFilter === "user"
+                                ? "mx_Stickers_filterButton mx_Stickers_filterButton_active"
+                                : "mx_Stickers_filterButton"
+                        }
+                        onClick={() => this.setGroupFilter("user")}
+                        aria-pressed={groupFilter === "user"}
+                    >
+                        {_t("stickers|filter_user")}
+                    </AccessibleButton>
+                </div>
+                <div className="mx_Stickers_packFilterRow">
+                    <label className="mx_Stickers_packFilterLabel">
+                        {_t("stickers|filter_pack_label")}
+                    </label>
+                    <select
+                        className="mx_Stickers_packSelect"
+                        value={packFilter}
+                        onChange={(ev) => this.setPackFilter(ev.target.value)}
+                    >
+                        <option value="all">{_t("stickers|filter_pack_all")}</option>
+                        {packOptions.map((pack) => (
+                            <option key={pack.id} value={pack.id}>
+                                {pack.label}
+                            </option>
+                        ))}
+                    </select>
+                </div>
+            </div>
+        );
+    }
+
     private getRoomEmotePacksContent(): JSX.Element | null {
         const roomPacks = getRoomEmotePacks(this.props.room, "sticker");
         const enabledRoomPacks = getEnabledRoomEmotePacks(MatrixClientPeg.safeGet(), this.props.room, "sticker");
@@ -286,19 +412,84 @@ export default class Stickerpicker extends React.PureComponent<IProps, IState> {
 
         if (!roomPacks.length && !enabledRoomPacks.length && !userPack) return null;
 
+        const { filterQuery, groupFilter, packFilter } = this.state;
+        const query = filterQuery.trim().toLowerCase();
+        const matchesQuery = (value?: string): boolean => !!query && !!value && value.toLowerCase().includes(query);
+
+        const buildPackLabel = (pack: RoomEmotePack): string =>
+            pack.displayName || pack.stateKey || _t("common|stickerpack");
+
+        const filterPack = (
+            pack: RoomEmotePack,
+            section: "room" | "global" | "user",
+            roomName?: string,
+        ): RoomEmotePack | null => {
+            const packId = `${section}:${pack.id}`;
+            if (packFilter !== "all" && packFilter !== packId) return null;
+            if (groupFilter !== "all" && groupFilter !== section) return null;
+
+            const packMatches =
+                matchesQuery(buildPackLabel(pack)) || matchesQuery(pack.stateKey) || matchesQuery(roomName);
+            const images = query
+                ? packMatches
+                    ? pack.images
+                    : pack.images.filter((image) => matchesQuery(image.body) || matchesQuery(image.key))
+                : pack.images;
+
+            if (!images.length) return null;
+
+            return { ...pack, images };
+        };
+
+        const packOptions: Array<{ id: string; label: string }> = [];
+        for (const pack of roomPacks) {
+            packOptions.push({ id: `room:${pack.id}`, label: buildPackLabel(pack) });
+        }
+        for (const { room, packs } of enabledRoomPacks) {
+            for (const pack of packs) {
+                packOptions.push({
+                    id: `global:${pack.id}`,
+                    label: `${room.name || room.roomId} · ${buildPackLabel(pack)}`,
+                });
+            }
+        }
+        if (userPack) {
+            packOptions.push({ id: `user:${userPack.id}`, label: buildPackLabel(userPack) });
+        }
+
+        const filteredRoomPacks = roomPacks
+            .map((pack) => filterPack(pack, "room"))
+            .filter((pack): pack is RoomEmotePack => !!pack);
+        const filteredEnabledPacks = enabledRoomPacks
+            .map(({ room, packs }) => ({
+                room,
+                packs: packs
+                    .map((pack) => filterPack(pack, "global", room.name || room.roomId))
+                    .filter((pack): pack is RoomEmotePack => !!pack),
+            }))
+            .filter(({ packs }) => packs.length > 0);
+        const filteredUserPack = userPack ? filterPack(userPack, "user") : null;
+
+        const hasResults =
+            filteredRoomPacks.length > 0 || filteredEnabledPacks.length > 0 || !!filteredUserPack;
+
         return (
             <div className="mx_Stickers_content_container">
                 <div className="mx_Stickers_content mx_Stickers_content_roomEmotes">
-                    {roomPacks.length > 0 && (
+                    {this.renderFilters(packOptions)}
+                    {!hasResults && (
+                        <div className="mx_Stickers_emptyResults">{_t("stickers|search_empty")}</div>
+                    )}
+                    {filteredRoomPacks.length > 0 && (
                         <div className="mx_Stickers_section">
                             <div className="mx_Stickers_sectionTitle">{_t("stickers|room_packs_section")}</div>
-                            {roomPacks.map((pack) => this.renderRoomEmotePack(pack, "room"))}
+                            {filteredRoomPacks.map((pack) => this.renderRoomEmotePack(pack, "room"))}
                         </div>
                     )}
-                    {enabledRoomPacks.length > 0 && (
+                    {filteredEnabledPacks.length > 0 && (
                         <div className="mx_Stickers_section">
                             <div className="mx_Stickers_sectionTitle">{_t("stickers|global_enabled_section")}</div>
-                            {enabledRoomPacks.map(({ room, packs }) => (
+                            {filteredEnabledPacks.map(({ room, packs }) => (
                                 <div className="mx_Stickers_roomGroup" key={`global_${room.roomId}`}>
                                     <div className="mx_Stickers_roomHeader">{room.name || room.roomId}</div>
                                     {packs.map((pack) => this.renderRoomEmotePack(pack, room.roomId))}
@@ -306,10 +497,10 @@ export default class Stickerpicker extends React.PureComponent<IProps, IState> {
                             ))}
                         </div>
                     )}
-                    {userPack && (
+                    {filteredUserPack && (
                         <div className="mx_Stickers_section">
                             <div className="mx_Stickers_sectionTitle">{_t("stickers|user_packs_section")}</div>
-                            {this.renderRoomEmotePack(userPack, "user")}
+                            {this.renderRoomEmotePack(filteredUserPack, "user")}
                         </div>
                     )}
                 </div>
@@ -350,13 +541,14 @@ export default class Stickerpicker extends React.PureComponent<IProps, IState> {
         // own iframe, within the stickerpicker UI element.
         const stickerpickerWidget = this.state.stickerpickerWidget;
         let stickersContent: JSX.Element | undefined;
+        const useWidget = this.props.mode !== "reaction";
 
         // Use a separate ReactDOM tree to render the AppTile separately so that it persists and does
         // not unmount when we (a) close the sticker picker (b) switch rooms. It's properties are still
         // updated.
 
         // Load stickerpack content
-        if (!!stickerpickerWidget?.content?.url) {
+        if (useWidget && !!stickerpickerWidget?.content?.url) {
             // Set default name
             stickerpickerWidget.content.name = stickerpickerWidget.content.name || _t("common|stickerpack");
 
