@@ -2,16 +2,26 @@
     overflow: hidden;
 }
 
-.mx_Stickers_content_container {
-    overflow: hidden;
-    height: 300px;
-}
-
-.mx_Stickers_content_container .mx_ContextualMenu_wrapper {
+.mx_Stickers_menuWrapper {
     width: 340px;
     height: min(450px, 80vh);
     max-height: 80vh;
+}
+
+.mx_Stickers_menu {
+    width: 100%;
+    height: 100%;
     border-radius: 4px;
+    overflow: hidden;
+}
+
+.mx_Stickers_menu > div {
+    height: 100%;
+}
+
+.mx_Stickers_content_container {
+    overflow: hidden;
+    height: 100%;
 }
 
 .mx_Stickers_panel {
@@ -19,6 +29,7 @@
     flex-direction: column;
     height: 100%;
     border-radius: 4px;
+    overflow: hidden;
 }
 
 .mx_Stickers_header {
@@ -29,11 +40,10 @@
 .mx_Stickers_body {
     flex: 1 1 auto;
     overflow: auto;
+    min-height: 0;
 }
 
 .mx_Stickers_content_roomEmotes {
-    overflow: auto;
-    height: 100%;
     padding: 8px 10px 12px;
     box-sizing: border-box;
 }
@@ -52,24 +62,61 @@
     gap: 8px;
 }
 
-.mx_Stickers_filterRow {
+.mx_Stickers_packTabs {
     display: flex;
-    flex-direction: column;
-    gap: 8px;
+    align-items: center;
+    gap: 4px;
+    padding: var(--cpd-space-1x) 0;
+    overflow-x: auto;
 }
 
-.mx_Stickers_packSelect {
-    flex: 1 1 auto;
-    font-size: $font-12px;
-    padding: 8px 12px;
-    border-radius: 4px;
-    border: 1px solid $input-border-color;
-    background-color: $background;
+.mx_Stickers_packTab {
+    border: none;
+    padding: var(--cpd-space-1x) 0;
+    font: inherit;
+    line-height: 1;
+    border-bottom: 2px solid transparent;
+    background-color: transparent;
+    border-radius: 4px 4px 0 0;
+    width: 36px;
+    height: 36px;
     color: $primary-content;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+
+    &:not(:disabled) {
+        cursor: pointer;
+    }
+
+    &:disabled {
+        filter: opacity(0.3);
+    }
+
+    &:not(:disabled):hover {
+        background-color: $focus-bg-color;
+        border-bottom: 2px solid $accent;
+    }
+}
+
+.mx_Stickers_packTab_active {
+    border-bottom: 2px solid $accent;
+}
+
+.mx_Stickers_packTab svg {
+    width: 18px;
+    height: 18px;
+}
+
+.mx_Stickers_packTabImage {
+    width: 24px;
+    height: 24px;
+    border-radius: 999px;
+    object-fit: cover;
 }
 
 .mx_Stickers_search {
-    margin: 0;
+    margin: 8px;
     border-radius: 4px;
     border: 1px solid $input-border-color;
     background-color: $background;
@@ -203,7 +250,7 @@
 
     iframe {
         /* Sticker picker depends on the fixed height previously used for all tiles */
-        height: 283px; /* height of the popout minus the AppTile menu bar */
+        height: 433px; /* height of the popout minus the AppTile menu bar */
     }
 }
 

@@ -9,6 +9,7 @@ import React, { type ChangeEvent, type JSX } from "react";
 import { type Room, ClientEvent, RoomStateEvent, type MatrixEvent } from "matrix-js-sdk/src/matrix";
 import { logger } from "matrix-js-sdk/src/logger";
 import { type IWidget } from "matrix-widget-api";
+import { GridIcon } from "@vector-im/compound-design-tokens/assets/web/icons";
 
 import { _t, _td } from "../../../languageHandler";
 import AppTile from "../elements/AppTile";
@@ -75,8 +76,8 @@ export default class Stickerpicker extends React.PureComponent<IProps, IState> {
 
     private prevSentVisibility?: boolean;
 
-    private popoverWidth = 300;
-    private popoverHeight = 300;
+    private popoverWidth = 340;
+    private popoverHeight = 450;
     // This is loaded by _acquireScalarClient on an as-needed basis.
     private scalarClient: ScalarAuthClient | null = null;
 
@@ -307,44 +308,69 @@ export default class Stickerpicker extends React.PureComponent<IProps, IState> {
         });
     };
 
-    private renderFilters(packOptions: Array<{ id: string; label: string }>): JSX.Element {
+    private renderFilters(packOptions: Array<{ id: string; label: string; avatarUrl?: string }>): JSX.Element {
         const { filterQuery, packFilter } = this.state;
 
         return (
             <div className="mx_Stickers_filters">
-                <div className="mx_Stickers_filterRow">
-                    <select
-                        className="mx_Stickers_packSelect"
-                        value={packFilter}
-                        onChange={(ev) => this.setPackFilter(ev.target.value)}
-                        aria-label={_t("stickers|filter_pack_label")}
+                <div className="mx_Stickers_packTabs" role="tablist" aria-label={_t("stickers|filter_pack_label")}>
+                    <AccessibleButton
+                        className={
+                            packFilter === "all"
+                                ? "mx_Stickers_packTab mx_Stickers_packTab_active"
+                                : "mx_Stickers_packTab"
+                        }
+                        onClick={() => this.setPackFilter("all")}
+                        aria-pressed={packFilter === "all"}
+                        title={_t("stickers|filter_pack_all")}
                     >
-                        <option value="all">{_t("stickers|filter_pack_all")}</option>
-                        {packOptions.map((pack) => (
-                            <option key={pack.id} value={pack.id}>
-                                {pack.label}
-                            </option>
-                        ))}
-                    </select>
-                    <div className="mx_Stickers_search">
-                        <input
-                            className="mx_Stickers_searchInput"
-                            type="text"
-                            value={filterQuery}
-                            onChange={this.onSearchChange}
-                            placeholder={_t("stickers|search_placeholder")}
-                            aria-label={_t("stickers|search_placeholder")}
-                        />
-                        {filterQuery && (
+                        <GridIcon />
+                    </AccessibleButton>
+                    {packOptions.map((pack) => {
+                        const isActive = packFilter === pack.id;
+                        return (
                             <AccessibleButton
-                                className="mx_Stickers_searchClear"
-                                onClick={this.onClearSearch}
-                                title={_t("action|clear")}
+                                key={pack.id}
+                                className={
+                                    isActive
+                                        ? "mx_Stickers_packTab mx_Stickers_packTab_active"
+                                        : "mx_Stickers_packTab"
+                                }
+                                onClick={() => this.setPackFilter(pack.id)}
+                                aria-pressed={isActive}
+                                title={pack.label}
                             >
-                                x
+                                {pack.avatarUrl ? (
+                                    <img
+                                        className="mx_Stickers_packTabImage"
+                                        alt=""
+                                        src={mediaFromMxc(pack.avatarUrl).getSquareThumbnailHttp(24) ?? undefined}
+                                    />
+                                ) : (
+                                    <GridIcon />
+                                )}
                             </AccessibleButton>
-                        )}
-                    </div>
+                        );
+                    })}
+                </div>
+                <div className="mx_Stickers_search">
+                    <input
+                        className="mx_Stickers_searchInput"
+                        type="text"
+                        value={filterQuery}
+                        onChange={this.onSearchChange}
+                        placeholder={_t("stickers|search_placeholder")}
+                        aria-label={_t("stickers|search_placeholder")}
+                    />
+                    {filterQuery && (
+                        <AccessibleButton
+                            className="mx_Stickers_searchClear"
+                            onClick={this.onClearSearch}
+                            title={_t("action|clear")}
+                        >
+                            x
+                        </AccessibleButton>
+                    )}
                 </div>
             </div>
         );
@@ -384,20 +410,25 @@ export default class Stickerpicker extends React.PureComponent<IProps, IState> {
             return { ...pack, images };
         };
 
-        const packOptions: Array<{ id: string; label: string }> = [];
+        const packOptions: Array<{ id: string; label: string; avatarUrl?: string }> = [];
         for (const pack of roomPacks) {
-            packOptions.push({ id: `room:${pack.id}`, label: buildPackLabel(pack) });
+            packOptions.push({ id: `room:${pack.id}`, label: buildPackLabel(pack), avatarUrl: pack.avatarUrl });
         }
         for (const { room, packs } of enabledRoomPacks) {
             for (const pack of packs) {
                 packOptions.push({
                     id: `global:${pack.id}`,
                     label: `${room.name || room.roomId} · ${buildPackLabel(pack)}`,
+                    avatarUrl: pack.avatarUrl,
                 });
             }
         }
         if (userPack) {
-            packOptions.push({ id: `user:${userPack.id}`, label: buildPackLabel(userPack) });
+            packOptions.push({
+                id: `user:${userPack.id}`,
+                label: buildPackLabel(userPack),
+                avatarUrl: userPack.avatarUrl,
+            });
         }
 
         const filteredRoomPacks = roomPacks
@@ -592,6 +623,8 @@ export default class Stickerpicker extends React.PureComponent<IProps, IState> {
                 menuPaddingRight={0}
                 zIndex={STICKERPICKER_Z_INDEX}
                 mountAsChild={true}
+                wrapperClassName="mx_Stickers_menuWrapper"
+                menuClassName="mx_Stickers_menu"
                 {...this.props.menuPosition}
             >
                 <GenericElementContextMenu element={this.getStickerpickerContent()} onResize={this.onFinished} />
