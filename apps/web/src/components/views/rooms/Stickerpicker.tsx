@@ -54,6 +54,7 @@ interface IProps {
     setStickerPickerOpen: (isStickerPickerOpen: boolean) => void;
     mode?: "sticker" | "reaction";
     onPickSticker?: (image: RoomEmoteImage) => void;
+    mountAsChild?: boolean;
 }
 
 interface IState {
@@ -68,6 +69,7 @@ export default class Stickerpicker extends React.PureComponent<IProps, IState> {
     public static defaultProps: Partial<IProps> = {
         threadId: null,
         mode: "sticker",
+        mountAsChild: true,
     };
 
     public static currentWidget?: UserWidget;
@@ -622,7 +624,7 @@ export default class Stickerpicker extends React.PureComponent<IProps, IState> {
                 menuPaddingLeft={0}
                 menuPaddingRight={0}
                 zIndex={STICKERPICKER_Z_INDEX}
-                mountAsChild={true}
+                mountAsChild={!!this.props.mountAsChild}
                 wrapperClassName="mx_Stickers_menuWrapper"
                 menuClassName="mx_Stickers_menu"
                 {...this.props.menuPosition}
