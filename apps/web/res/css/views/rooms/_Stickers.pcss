@@ -34,7 +34,7 @@
 
 .mx_Stickers_header {
     border-bottom: 1px solid $message-action-bar-border-color;
-    padding: 4px 8px 0;
+    padding: 4px 8px;
 }
 
 .mx_Stickers_body {
@@ -59,14 +59,14 @@
 .mx_Stickers_filters {
     display: flex;
     flex-direction: column;
-    gap: 8px;
+    gap: 4px;
 }
 
 .mx_Stickers_packTabs {
     display: flex;
     align-items: center;
     gap: 4px;
-    padding: var(--cpd-space-1x) 0;
+    padding: 0;
     overflow-x: auto;
 }
 
@@ -116,20 +116,22 @@
 }
 
 .mx_Stickers_search {
-    margin: 8px;
+    margin: 0;
     border-radius: 4px;
-    border: 1px solid $input-border-color;
-    background-color: $background;
+    border: none;
+    background-color: transparent;
     display: flex;
 
     .mx_Stickers_searchInput {
         flex: 1;
         border: none;
         padding: 8px 12px;
-        border-radius: 4px 0 0 4px;
+        border-radius: 4px;
         font-size: $font-12px;
         background: transparent;
         color: $primary-content;
+        outline: none;
+        box-shadow: none;
 
         &::placeholder {
             color: var(--cpd-color-text-secondary);
@@ -146,6 +148,7 @@
         height: 32px;
         cursor: pointer;
         color: $muted-fg-color;
+        margin-left: -40px;
     }
 }
 
