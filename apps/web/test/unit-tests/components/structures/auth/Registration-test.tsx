@@ -119,6 +119,28 @@ describe("Registration", function () {
         expect(container.querySelector("form")).toBeTruthy();
     });
 
+    it("should hide change server link when custom URLs disabled and no homeserver options", async function () {
+        const { container } = getComponent();
+        await waitForElementToBeRemoved(() => screen.queryAllByLabelText("Loading…"));
+
+        expect(container.querySelector("form")).toBeTruthy();
+        expect(container.querySelectorAll(".mx_ServerPicker_change")).toHaveLength(0);
+    });
+
+    it("should show change server link when custom URLs are disabled but homeserver options exist", async function () {
+        SdkConfig.put({
+            ...DEFAULTS,
+            disable_custom_urls: true,
+            homeserver_options: [{ name: "Matrix", server: "matrix.org" }],
+        });
+
+        const { container } = getComponent();
+        await waitForElementToBeRemoved(() => screen.queryAllByLabelText("Loading…"));
+
+        expect(container.querySelector("form")).toBeTruthy();
+        expect(container.querySelector(".mx_ServerPicker_change")).toBeTruthy();
+    });
+
     it("should show SSO options if those are available", async () => {
         mockClient.loginFlows.mockClear().mockResolvedValue({ flows: [{ type: "m.login.sso" }] });
         const { container } = getComponent();

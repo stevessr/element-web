@@ -26,8 +26,10 @@ for the desktop app the application will need to be exited fully (including via 
 ## Homeserver configuration
 
 In order for Element to even start you will need to tell it what homeserver to connect to _by default_. Users will be
-able to use a different homeserver if they like, though this can be disabled with `"disable_custom_urls": true` in your
-config.
+able to use a different homeserver if they like.
+
+You can disable manual homeserver entry with `"disable_custom_urls": true` in your config. This disables custom URL input,
+but if `homeserver_options` are configured, users can still switch between those configured options.
 
 One of the following options **must** be supplied:
 
@@ -56,6 +58,22 @@ One of the following options **must** be supplied:
 If both `default_server_config` and `default_server_name` are used, Element will try to look up the connection
 information using `.well-known`, and if that fails, take `default_server_config` as the homeserver connection
 information.
+
+If you want to offer a list of predefined homeservers in the login/registration UI, use `homeserver_options`:
+
+```json
+{
+    "homeserver_options": [
+        { "name": "Matrix.org", "server": "matrix.org" },
+        { "name": "Example Homeserver", "server": "https://hs.example.com" }
+    ]
+}
+```
+
+Where:
+
+- `name`: Display name shown in the UI.
+- `server`: Homeserver domain (for well-known lookup) or full URL.
 
 ## Labs flags
 

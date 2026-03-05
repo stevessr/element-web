@@ -19,7 +19,7 @@ import { type ValidatedServerConfig } from "../../../../../src/utils/ValidatedSe
 const SERVER_SUPPORTED_MATRIX_VERSIONS = ["v1.1", "v1.5", "v1.6", "v1.8", "v1.9"];
 
 describe("<ServerPickerDialog />", () => {
-    const defaultServerConfig = {
+    const defaultServerConfig: ValidatedServerConfig = {
         hsUrl: "https://matrix.org",
         hsName: "matrix.org",
         hsNameIsDifferent: true,
@@ -42,16 +42,31 @@ describe("<ServerPickerDialog />", () => {
         serverConfig: defaultServerConfig,
         onFinished: jest.fn(),
     };
+
     const getComponent = (
         props: Partial<{
-            onFinished: any;
+            onFinished: (config?: ValidatedServerConfig) => void;
             serverConfig: ValidatedServerConfig;
         }> = {},
     ) => render(<ServerPickerDialog {...defaultProps} {...props} />);
 
+    const getOtherHomeserverCheckBox = () =>
+        screen.getAllByLabelText("Other homeserver").find((node) => node.getAttribute("type") === "radio")!;
+    const getOtherHomeserverInput = () =>
+        screen.getAllByLabelText("Other homeserver").find((node) => node.getAttribute("type") === "text")!;
+    const queryOtherHomeserverInput = () =>
+        screen.queryAllByLabelText("Other homeserver").find((node) => node.getAttribute("type") === "text") ?? null;
+
+    const selectCustomHomeserver = () => {
+        fireEvent.click(getOtherHomeserverCheckBox());
+        expect(getOtherHomeserverCheckBox()).toBeChecked();
+    };
+
     beforeEach(() => {
+        SdkConfig.reset();
         SdkConfig.add({
             validated_server_config: defaultServerConfig,
+            disable_custom_urls: false,
         });
 
         fetchMock.clearHistory();
@@ -62,22 +77,21 @@ describe("<ServerPickerDialog />", () => {
         });
     });
 
+    afterEach(() => {
+        SdkConfig.reset();
+    });
+
     it("should render dialog", () => {
         const { container } = getComponent();
         expect(container).toMatchSnapshot();
     });
 
-    // checkbox and text input have the same aria-label
-    const getOtherHomeserverCheckBox = () =>
-        screen.getAllByLabelText("Other homeserver").find((node) => node.getAttribute("type") === "radio")!;
-    const getOtherHomeserverInput = () =>
-        screen.getAllByLabelText("Other homeserver").find((node) => node.getAttribute("type") === "text")!;
-
     describe("when default server config is selected", () => {
-        it("should select other homeserver field on open", () => {
+        it("should select default homeserver field on open", () => {
             getComponent();
-            expect(getOtherHomeserverCheckBox()).toBeChecked();
-            // empty field
+
+            expect(screen.getByTestId("defaultHomeserver")).toBeChecked();
+            expect(getOtherHomeserverCheckBox()).not.toBeChecked();
             expect(getOtherHomeserverInput()).toHaveDisplayValue("");
         });
 
@@ -85,6 +99,7 @@ describe("<ServerPickerDialog />", () => {
             const onFinished = jest.fn();
             const { container } = getComponent({ onFinished });
 
+            selectCustomHomeserver();
             fireEvent.click(screen.getByText("Continue"));
 
             await flushPromises();
@@ -116,7 +131,7 @@ describe("<ServerPickerDialog />", () => {
             });
 
             const onFinished = jest.fn();
-            const serverConfig = {
+            const serverConfig: ValidatedServerConfig = {
                 hsUrl: "https://custom.org",
                 hsName: "custom.org",
                 hsNameIsDifferent: true,
@@ -147,6 +162,7 @@ describe("<ServerPickerDialog />", () => {
             const onFinished = jest.fn();
             getComponent({ onFinished });
 
+            selectCustomHomeserver();
             fireEvent.change(getOtherHomeserverInput(), { target: { value: homeserver } });
             expect(getOtherHomeserverInput()).toHaveDisplayValue(homeserver);
 
@@ -174,6 +190,7 @@ describe("<ServerPickerDialog />", () => {
                 fetchMock.get(wellKnownUrl, {});
                 getComponent();
 
+                selectCustomHomeserver();
                 fireEvent.change(getOtherHomeserverInput(), { target: { value: homeserver } });
                 expect(getOtherHomeserverInput()).toHaveDisplayValue(homeserver);
                 // trigger validation
@@ -201,6 +218,7 @@ describe("<ServerPickerDialog />", () => {
                 const onFinished = jest.fn();
                 getComponent({ onFinished });
 
+                selectCustomHomeserver();
                 fireEvent.change(getOtherHomeserverInput(), { target: { value: homeserver } });
                 fireEvent.click(screen.getByText("Continue"));
 
@@ -237,6 +255,7 @@ describe("<ServerPickerDialog />", () => {
                 const onFinished = jest.fn();
                 getComponent({ onFinished });
 
+                selectCustomHomeserver();
                 fireEvent.change(getOtherHomeserverInput(), { target: { value: homeserver } });
                 fireEvent.click(screen.getByText("Continue"));
 
@@ -255,6 +274,94 @@ describe("<ServerPickerDialog />", () => {
                     isNameResolvable: false,
                     isUrl: defaultServerConfig.isUrl,
                 });
+            });
+        });
+    });
+
+    describe("with homeserver options", () => {
+        const homeserverOptions = [
+            { name: "Preset One", server: "https://preset-one.site" },
+            { name: "Preset Two", server: "https://preset-two.site" },
+        ];
+
+        beforeEach(() => {
+            SdkConfig.add({ homeserver_options: homeserverOptions });
+        });
+
+        it("should render configured preset homeserver options", () => {
+            getComponent();
+
+            expect(screen.getByTestId("presetHomeserver-0")).toBeInTheDocument();
+            expect(screen.getByTestId("presetHomeserver-1")).toBeInTheDocument();
+            expect(screen.getByText("Preset One")).toBeInTheDocument();
+            expect(screen.getByText("Preset Two")).toBeInTheDocument();
+        });
+
+        it("should submit successfully with a selected preset homeserver", async () => {
+            const onFinished = jest.fn();
+            fetchMock.get("https://preset-two.site/_matrix/client/versions", {
+                unstable_features: {},
+                versions: SERVER_SUPPORTED_MATRIX_VERSIONS,
+            });
+            getComponent({ onFinished });
+
+            fireEvent.click(screen.getByTestId("presetHomeserver-1"));
+            expect(screen.getByTestId("presetHomeserver-1")).toBeChecked();
+
+            fireEvent.click(screen.getByText("Continue"));
+            await flushPromises();
+
+            expect(onFinished).toHaveBeenCalledWith({
+                hsName: "preset-two.site",
+                hsUrl: "https://preset-two.site",
+                hsNameIsDifferent: false,
+                warning: null,
+                isDefault: false,
+                isNameResolvable: false,
+                isUrl: defaultServerConfig.isUrl,
+            });
+        });
+
+        it("should initialise as selected when current server matches a preset", () => {
+            const serverConfig: ValidatedServerConfig = {
+                hsUrl: "https://preset-two.site",
+                hsName: "preset-two.site",
+                hsNameIsDifferent: false,
+                isUrl: "https://is.org",
+                isDefault: false,
+                isNameResolvable: false,
+                warning: "",
+            };
+
+            getComponent({ serverConfig });
+
+            expect(screen.getByTestId("presetHomeserver-1")).toBeChecked();
+        });
+
+        it("should hide custom input but allow preset submit when custom URLs are disabled", async () => {
+            SdkConfig.add({ disable_custom_urls: true });
+            fetchMock.get("https://preset-one.site/_matrix/client/versions", {
+                unstable_features: {},
+                versions: SERVER_SUPPORTED_MATRIX_VERSIONS,
+            });
+
+            const onFinished = jest.fn();
+            getComponent({ onFinished });
+
+            expect(queryOtherHomeserverInput()).toBeNull();
+
+            fireEvent.click(screen.getByTestId("presetHomeserver-0"));
+            fireEvent.click(screen.getByText("Continue"));
+            await flushPromises();
+
+            expect(onFinished).toHaveBeenCalledWith({
+                hsName: "preset-one.site",
+                hsUrl: "https://preset-one.site",
+                hsNameIsDifferent: false,
+                warning: null,
+                isDefault: false,
+                isNameResolvable: false,
+                isUrl: defaultServerConfig.isUrl,
             });
         });
     });

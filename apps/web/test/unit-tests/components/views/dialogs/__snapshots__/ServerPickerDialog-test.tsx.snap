@@ -35,14 +35,14 @@ exports[`<ServerPickerDialog /> should render dialog 1`] = `
         Matrix.org is the biggest public homeserver in the world, so it's a good place for many.
       </p>
       <label
-        class="mx_StyledRadioButton mx_StyledRadioButton_enabled"
+        class="mx_StyledRadioButton mx_StyledRadioButton_enabled mx_StyledRadioButton_checked"
       >
         <input
           checked=""
           data-testid="defaultHomeserver"
-          name="defaultChosen"
+          name="homeserverChoice"
           type="radio"
-          value="true"
+          value="default"
         />
         <div>
           <div />
@@ -63,16 +63,16 @@ exports[`<ServerPickerDialog /> should render dialog 1`] = `
         />
       </label>
       <div
-        class="mx_StyledRadioButton mx_ServerPickerDialog_otherHomeserverRadio mx_StyledRadioButton_enabled mx_StyledRadioButton_checked"
+        class="mx_StyledRadioButton mx_ServerPickerDialog_otherHomeserverRadio mx_StyledRadioButton_enabled"
       >
         <label
           class="mx_StyledRadioButton_innerLabel"
         >
           <input
             aria-label="Other homeserver"
-            name="defaultChosen"
+            name="homeserverChoice"
             type="radio"
-            value="false"
+            value="custom"
           />
           <div>
             <div />

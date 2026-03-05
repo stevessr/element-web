@@ -47,6 +47,10 @@ export interface IConfigOptions {
     fallback_hs_url?: string;
 
     disable_custom_urls?: boolean;
+    homeserver_options?: Array<{
+        name: string;
+        server: string;
+    }>;
     disable_guests?: boolean;
     disable_login_language_selector?: boolean;
     disable_3pid_login?: boolean;

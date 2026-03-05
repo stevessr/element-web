@@ -9,6 +9,10 @@
         }
     },
     "disable_custom_urls": false,
+    "homeserver_options": [
+        { "name": "Matrix.org", "server": "matrix.org" },
+        { "name": "Example Homeserver", "server": "https://hs.example.com" }
+    ],
     "disable_guests": false,
     "disable_login_language_selector": false,
     "disable_3pid_login": false,

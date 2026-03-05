@@ -138,6 +138,21 @@ describe("Login", function () {
         expect(container.querySelectorAll(".mx_ServerPicker_change")).toHaveLength(0);
     });
 
+    it("should show change server link when custom URLs are disabled but homeserver options exist", async () => {
+        SdkConfig.put({
+            brand: "test-brand",
+            disable_custom_urls: true,
+            homeserver_options: [{ name: "Matrix", server: "matrix.org" }],
+            oidc_static_clients: oidcStaticClientsConfig,
+        });
+
+        const { container } = getComponent();
+        await waitForElementToBeRemoved(() => screen.queryAllByLabelText("Loading…"));
+
+        expect(container.querySelector("form")).toBeTruthy();
+        expect(container.querySelector(".mx_ServerPicker_change")).toBeTruthy();
+    });
+
     it("should show SSO button if that flow is available", async () => {
         mockClient.loginFlows.mockResolvedValue({ flows: [{ type: "m.login.sso" }] });
 

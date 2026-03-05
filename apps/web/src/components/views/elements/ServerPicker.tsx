@@ -52,9 +52,12 @@ const onHelpClick = (): void => {
 
 const ServerPicker: React.FC<IProps> = ({ title, dialogTitle, serverConfig, onServerConfigChange, disabled }) => {
     const disableCustomUrls = SdkConfig.get("disable_custom_urls");
+    const homeserverOptions = SdkConfig.get("homeserver_options") ?? [];
+
+    const canChangeServer = !disableCustomUrls || homeserverOptions.length > 0;
 
     let editBtn;
-    if (!disableCustomUrls && onServerConfigChange) {
+    if (canChangeServer && onServerConfigChange) {
         const onClick = (): void => {
             showPickerDialog(dialogTitle, serverConfig, (config?: ValidatedServerConfig) => {
                 if (config) {

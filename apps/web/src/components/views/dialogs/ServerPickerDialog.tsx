@@ -28,13 +28,23 @@ interface IProps {
     onFinished(config?: ValidatedServerConfig): void;
 }
 
+type ServerType = "default" | "preset" | "custom";
+
+interface IConfigHomeserverOption {
+    name: string;
+    server: string;
+}
+
 interface IState {
-    defaultChosen: boolean;
+    selectedType: ServerType;
+    selectedPreset?: string;
     otherHomeserver: string;
 }
 
 export default class ServerPickerDialog extends React.PureComponent<IProps, IState> {
     private readonly defaultServer: ValidatedServerConfig;
+    private readonly homeserverOptions: IConfigHomeserverOption[];
+    private readonly disableCustomUrls: boolean;
     private readonly fieldRef = createRef<Field>();
     private validatedConf?: ValidatedServerConfig;
 
@@ -43,29 +53,84 @@ export default class ServerPickerDialog extends React.PureComponent<IProps, ISta
 
         const config = SdkConfig.get();
         this.defaultServer = config["validated_server_config"]!;
+        this.homeserverOptions = config["homeserver_options"] ?? [];
+        this.disableCustomUrls = !!config["disable_custom_urls"];
+
         const { serverConfig } = this.props;
 
+        let selectedType: ServerType = "default";
+        let selectedPreset: string | undefined;
         let otherHomeserver = "";
+
         if (!serverConfig.isDefault) {
-            if (serverConfig.isNameResolvable && serverConfig.hsName) {
-                otherHomeserver = serverConfig.hsName;
+            selectedPreset = this.findMatchingPreset(serverConfig);
+            if (selectedPreset) {
+                selectedType = "preset";
             } else {
-                otherHomeserver = serverConfig.hsUrl;
+                selectedType = this.disableCustomUrls ? "default" : "custom";
+                if (!this.disableCustomUrls) {
+                    if (serverConfig.isNameResolvable && serverConfig.hsName) {
+                        otherHomeserver = serverConfig.hsName;
+                    } else {
+                        otherHomeserver = serverConfig.hsUrl;
+                    }
+                }
             }
         }
 
         this.state = {
-            defaultChosen: serverConfig.isDefault,
+            selectedType,
+            selectedPreset,
             otherHomeserver,
         };
     }
 
+    private normaliseServerInput = (server: string): string => {
+        const trimmed = server.trim().toLowerCase();
+        if (!trimmed) return "";
+        if (!trimmed.includes("://")) {
+            return trimmed.replace(/\/+$/, "");
+        }
+
+        try {
+            const parsed = new URL(trimmed);
+            return `${parsed.protocol}//${parsed.host}`;
+        } catch {
+            return trimmed.replace(/\/+$/, "");
+        }
+    };
+
+    private getKnownServerIdentifiers = (config: ValidatedServerConfig): string[] => {
+        const identifiers = [config.hsName, config.hsUrl].filter(Boolean).map(this.normaliseServerInput);
+        return Array.from(new Set(identifiers));
+    };
+
+    private findMatchingPreset = (serverConfig: ValidatedServerConfig): string | undefined => {
+        const identifiers = this.getKnownServerIdentifiers(serverConfig);
+        if (!identifiers.length) {
+            return undefined;
+        }
+
+        for (const option of this.homeserverOptions) {
+            const normalisedOption = this.normaliseServerInput(option.server);
+            if (identifiers.includes(normalisedOption)) {
+                return option.server;
+            }
+        }
+
+        return undefined;
+    };
+
     private onDefaultChosen = (): void => {
-        this.setState({ defaultChosen: true });
+        this.setState({ selectedType: "default" });
+    };
+
+    private onPresetChosen = (ev: ChangeEvent<HTMLInputElement>): void => {
+        this.setState({ selectedType: "preset", selectedPreset: ev.target.value });
     };
 
     private onOtherChosen = (): void => {
-        this.setState({ defaultChosen: false });
+        this.setState({ selectedType: "custom" });
     };
 
     private onHomeserverChange = (ev: ChangeEvent<HTMLInputElement>): void => {
@@ -146,11 +211,33 @@ export default class ServerPickerDialog extends React.PureComponent<IProps, ISta
 
     private onHomeserverValidate = (fieldState: IFieldState): Promise<IValidationResult> => this.validate(fieldState);
 
+    private validateHomeserverAndSubmit = async (homeserver: string): Promise<void> => {
+        const valid = await this.validate({ value: homeserver, focused: true, allowEmpty: false });
+
+        if (!valid.valid) {
+            if (this.state.selectedType === "custom") {
+                this.fieldRef.current?.focus();
+                this.fieldRef.current?.validate({ allowEmpty: false, focused: true });
+            }
+            return;
+        }
+
+        this.props.onFinished(this.validatedConf);
+    };
+
     private onSubmit = async (ev: SyntheticEvent): Promise<void> => {
         ev.preventDefault();
 
-        if (this.state.defaultChosen) {
+        if (this.state.selectedType === "default") {
             this.props.onFinished(this.defaultServer);
+            return;
+        }
+
+        if (this.state.selectedType === "preset") {
+            if (!this.state.selectedPreset) {
+                return;
+            }
+            await this.validateHomeserverAndSubmit(this.state.selectedPreset);
             return;
         }
 
@@ -195,39 +282,60 @@ export default class ServerPickerDialog extends React.PureComponent<IProps, ISta
                     </p>
 
                     <StyledRadioButton
-                        name="defaultChosen"
-                        value="true"
-                        checked={this.state.defaultChosen}
+                        name="homeserverChoice"
+                        value="default"
+                        checked={this.state.selectedType === "default"}
                         onChange={this.onDefaultChosen}
                         data-testid="defaultHomeserver"
                     >
                         {defaultServerName}
                     </StyledRadioButton>
 
-                    <StyledRadioButton
-                        name="defaultChosen"
-                        value="false"
-                        className="mx_ServerPickerDialog_otherHomeserverRadio"
-                        checked={!this.state.defaultChosen}
-                        onChange={this.onOtherChosen}
-                        childrenInLabel={false}
-                        aria-label={_t("auth|server_picker_custom")}
-                    >
-                        <Field
-                            type="text"
-                            className="mx_ServerPickerDialog_otherHomeserver"
-                            label={_t("auth|server_picker_custom")}
-                            onChange={this.onHomeserverChange}
-                            onFocus={this.onOtherChosen}
-                            ref={this.fieldRef}
-                            onValidate={this.onHomeserverValidate}
-                            value={this.state.otherHomeserver}
-                            validateOnChange={false}
-                            validateOnFocus={false}
-                            autoFocus={true}
-                            id="mx_homeserverInput"
-                        />
-                    </StyledRadioButton>
+                    {this.homeserverOptions.map((option, index) => {
+                        const testId = `presetHomeserver-${index}`;
+                        return (
+                            <StyledRadioButton
+                                key={`${option.name}-${option.server}-${index}`}
+                                name="homeserverChoice"
+                                value={option.server}
+                                className="mx_ServerPickerDialog_presetHomeserverRadio"
+                                checked={
+                                    this.state.selectedType === "preset" && this.state.selectedPreset === option.server
+                                }
+                                onChange={this.onPresetChosen}
+                                data-testid={testId}
+                            >
+                                {option.name}
+                            </StyledRadioButton>
+                        );
+                    })}
+
+                    {!this.disableCustomUrls && (
+                        <StyledRadioButton
+                            name="homeserverChoice"
+                            value="custom"
+                            className="mx_ServerPickerDialog_otherHomeserverRadio"
+                            checked={this.state.selectedType === "custom"}
+                            onChange={this.onOtherChosen}
+                            childrenInLabel={false}
+                            aria-label={_t("auth|server_picker_custom")}
+                        >
+                            <Field
+                                type="text"
+                                className="mx_ServerPickerDialog_otherHomeserver"
+                                label={_t("auth|server_picker_custom")}
+                                onChange={this.onHomeserverChange}
+                                onFocus={this.onOtherChosen}
+                                ref={this.fieldRef}
+                                onValidate={this.onHomeserverValidate}
+                                value={this.state.otherHomeserver}
+                                validateOnChange={false}
+                                validateOnFocus={false}
+                                autoFocus={this.state.selectedType === "custom"}
+                                id="mx_homeserverInput"
+                            />
+                        </StyledRadioButton>
+                    )}
                     <p>{_t("auth|server_picker_explainer")}</p>
 
                     <AccessibleButton className="mx_ServerPickerDialog_continue" kind="primary" onClick={this.onSubmit}>
