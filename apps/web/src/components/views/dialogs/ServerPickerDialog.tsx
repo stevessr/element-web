@@ -15,6 +15,7 @@ import BaseDialog from "./BaseDialog";
 import { _t, UserFriendlyError } from "../../../languageHandler";
 import AccessibleButton from "../elements/AccessibleButton";
 import SdkConfig from "../../../SdkConfig";
+import { type IConfigHomeserverOption, type IServerConfigSource } from "../../../IConfigOptions";
 import Field from "../elements/Field";
 import StyledRadioButton from "../elements/StyledRadioButton";
 import TextWithTooltip from "../elements/TextWithTooltip";
@@ -29,11 +30,6 @@ interface IProps {
 }
 
 type ServerType = "default" | "preset" | "custom";
-
-interface IConfigHomeserverOption {
-    name: string;
-    server: string;
-}
 
 interface IState {
     selectedType: ServerType;
@@ -101,7 +97,66 @@ export default class ServerPickerDialog extends React.PureComponent<IProps, ISta
     };
 
     private getKnownServerIdentifiers = (config: ValidatedServerConfig): string[] => {
-        const identifiers = [config.hsName, config.hsUrl].filter(Boolean).map(this.normaliseServerInput);
+        const identifiers = [config.hsName, config.hsUrl]
+            .filter((value): value is string => !!value)
+            .map(this.normaliseServerInput);
+        return Array.from(new Set(identifiers));
+    };
+
+    private getPresetValue = (index: number): string => {
+        return index.toString();
+    };
+
+    private getPresetByValue = (value: string): IConfigHomeserverOption | undefined => {
+        const index = Number.parseInt(value, 10);
+        if (Number.isNaN(index)) {
+            return undefined;
+        }
+
+        return this.homeserverOptions[index];
+    };
+
+    private getServerConfigSourceFromLegacyServer = (server: string): IServerConfigSource => {
+        const trimmedServer = server.trim();
+        if (trimmedServer.includes("://")) {
+            return {
+                default_hs_url: trimmedServer,
+            };
+        }
+
+        return {
+            default_server_name: trimmedServer,
+        };
+    };
+
+    private getPresetServerConfigSource = (option: IConfigHomeserverOption): IServerConfigSource | undefined => {
+        if (option.default_server_config || option.default_server_name || option.default_hs_url) {
+            return {
+                default_server_config: option.default_server_config,
+                default_server_name: option.default_server_name,
+                default_hs_url: option.default_hs_url,
+                default_is_url: option.default_is_url,
+            };
+        }
+
+        if (option.server) {
+            return this.getServerConfigSourceFromLegacyServer(option.server);
+        }
+
+        return undefined;
+    };
+
+    private getPresetIdentifiers = (option: IConfigHomeserverOption): string[] => {
+        const source = this.getPresetServerConfigSource(option);
+        const identifiers = [
+            option.server,
+            source?.default_server_name,
+            source?.default_hs_url,
+            source?.default_server_config?.["m.homeserver"]?.base_url,
+        ]
+            .filter((value): value is string => !!value)
+            .map(this.normaliseServerInput);
+
         return Array.from(new Set(identifiers));
     };
 
@@ -111,14 +166,28 @@ export default class ServerPickerDialog extends React.PureComponent<IProps, ISta
             return undefined;
         }
 
-        for (const option of this.homeserverOptions) {
-            const normalisedOption = this.normaliseServerInput(option.server);
-            if (identifiers.includes(normalisedOption)) {
-                return option.server;
+        for (const [index, option] of this.homeserverOptions.entries()) {
+            const optionIdentifiers = this.getPresetIdentifiers(option);
+            if (optionIdentifiers.some((identifier) => identifiers.includes(identifier))) {
+                return this.getPresetValue(index);
             }
         }
 
         return undefined;
+    };
+
+    private validatePresetAndSubmit = async (preset: IConfigHomeserverOption): Promise<void> => {
+        const source = this.getPresetServerConfigSource(preset);
+        if (!source) {
+            return;
+        }
+
+        try {
+            this.validatedConf = await AutoDiscoveryUtils.validateServerConfigSource(source);
+            this.props.onFinished(this.validatedConf);
+        } catch (e) {
+            logger.error(e);
+        }
     };
 
     private onDefaultChosen = (): void => {
@@ -211,20 +280,6 @@ export default class ServerPickerDialog extends React.PureComponent<IProps, ISta
 
     private onHomeserverValidate = (fieldState: IFieldState): Promise<IValidationResult> => this.validate(fieldState);
 
-    private validateHomeserverAndSubmit = async (homeserver: string): Promise<void> => {
-        const valid = await this.validate({ value: homeserver, focused: true, allowEmpty: false });
-
-        if (!valid.valid) {
-            if (this.state.selectedType === "custom") {
-                this.fieldRef.current?.focus();
-                this.fieldRef.current?.validate({ allowEmpty: false, focused: true });
-            }
-            return;
-        }
-
-        this.props.onFinished(this.validatedConf);
-    };
-
     private onSubmit = async (ev: SyntheticEvent): Promise<void> => {
         ev.preventDefault();
 
@@ -237,7 +292,11 @@ export default class ServerPickerDialog extends React.PureComponent<IProps, ISta
             if (!this.state.selectedPreset) {
                 return;
             }
-            await this.validateHomeserverAndSubmit(this.state.selectedPreset);
+            const selectedPreset = this.getPresetByValue(this.state.selectedPreset);
+            if (!selectedPreset) {
+                return;
+            }
+            await this.validatePresetAndSubmit(selectedPreset);
             return;
         }
 
@@ -293,14 +352,15 @@ export default class ServerPickerDialog extends React.PureComponent<IProps, ISta
 
                     {this.homeserverOptions.map((option, index) => {
                         const testId = `presetHomeserver-${index}`;
+                        const presetValue = this.getPresetValue(index);
                         return (
                             <StyledRadioButton
-                                key={`${option.name}-${option.server}-${index}`}
+                                key={`${option.name}-${presetValue}`}
                                 name="homeserverChoice"
-                                value={option.server}
+                                value={presetValue}
                                 className="mx_ServerPickerDialog_presetHomeserverRadio"
                                 checked={
-                                    this.state.selectedType === "preset" && this.state.selectedPreset === option.server
+                                    this.state.selectedType === "preset" && this.state.selectedPreset === presetValue
                                 }
                                 onChange={this.onPresetChosen}
                                 data-testid={testId}

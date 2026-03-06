@@ -20,6 +20,7 @@ import { logger } from "matrix-js-sdk/src/logger";
 
 import { _t, _td, UserFriendlyError } from "../languageHandler";
 import SdkConfig from "../SdkConfig";
+import { type IServerConfigSource } from "../IConfigOptions";
 import { type ValidatedServerConfig } from "./ValidatedServerConfig";
 
 const LIVELINESS_DISCOVERY_ERRORS: AutoDiscoveryError[] = [
@@ -63,6 +64,11 @@ const mapAutoDiscoveryErrorTranslation = (err: AutoDiscoveryError): TranslationK
             return _td("auth|autodiscovery_hs_incompatible");
     }
 };
+
+interface IValidateServerConfigSourceOptions {
+    syntaxOnly?: boolean;
+    logDeprecationWarnings?: boolean;
+}
 
 export default class AutoDiscoveryUtils {
     /**
@@ -154,6 +160,77 @@ export default class AutoDiscoveryUtils {
         };
     }
 
+    public static buildWellKnownConfigFromUrls(homeserverUrl: string, identityUrl?: string): IClientWellKnown {
+        const wellknownConfig: IClientWellKnown = {
+            "m.homeserver": {
+                base_url: homeserverUrl,
+            },
+        };
+
+        if (identityUrl) {
+            wellknownConfig["m.identity_server"] = {
+                base_url: identityUrl,
+            };
+        }
+
+        return wellknownConfig;
+    }
+
+    public static async validateServerConfigSource(
+        source: IServerConfigSource,
+        options: IValidateServerConfigSourceOptions = {},
+    ): Promise<ValidatedServerConfig> {
+        const { syntaxOnly = false, logDeprecationWarnings = false } = options;
+
+        let wkConfig = source.default_server_config;
+        const serverName = source.default_server_name;
+        const hsUrl = source.default_hs_url;
+        const isUrl = source.default_is_url;
+
+        const incompatibleOptions = [wkConfig, serverName, hsUrl].filter((i) => !!i);
+        if (hsUrl && (wkConfig || serverName)) {
+            throw new UserFriendlyError("error|invalid_configuration_mixed_server");
+        }
+        if (incompatibleOptions.length < 1) {
+            throw new UserFriendlyError("error|invalid_configuration_no_server");
+        }
+
+        if (hsUrl) {
+            logger.log("Config uses a default_hs_url - constructing a default_server_config using this information");
+            if (logDeprecationWarnings) {
+                logger.warn(
+                    "DEPRECATED CONFIG OPTION: In the future, default_hs_url will not be accepted. Please use " +
+                        "default_server_config instead.",
+                );
+            }
+
+            wkConfig = AutoDiscoveryUtils.buildWellKnownConfigFromUrls(hsUrl, isUrl);
+        }
+
+        let discoveryResult: ClientConfig | undefined;
+        if (!serverName && wkConfig) {
+            logger.log("Config uses a default_server_config - validating object");
+            discoveryResult = await AutoDiscovery.fromDiscoveryConfig(wkConfig);
+        }
+
+        if (serverName) {
+            logger.log("Config uses a default_server_name - doing .well-known lookup");
+            if (logDeprecationWarnings) {
+                logger.warn(
+                    "DEPRECATED CONFIG OPTION: In the future, default_server_name will not be accepted. Please " +
+                        "use default_server_config instead.",
+                );
+            }
+            discoveryResult = await AutoDiscovery.findClientConfig(serverName);
+            if (discoveryResult["m.homeserver"].base_url === null && wkConfig) {
+                logger.log("Finding base_url failed but a default_server_config was found - using it as a fallback");
+                discoveryResult = await AutoDiscovery.fromDiscoveryConfig(wkConfig);
+            }
+        }
+
+        return AutoDiscoveryUtils.buildValidatedConfigFromDiscovery(serverName, discoveryResult, syntaxOnly);
+    }
+
     /**
      * Validates a server configuration, using a pair of URLs as input.
      * @param {string} homeserverUrl The homeserver URL.
@@ -171,19 +248,9 @@ export default class AutoDiscoveryUtils {
             throw new UserFriendlyError("auth|no_hs_url_provided");
         }
 
-        const wellknownConfig: IClientWellKnown = {
-            "m.homeserver": {
-                base_url: homeserverUrl,
-            },
-        };
-
-        if (identityUrl) {
-            wellknownConfig["m.identity_server"] = {
-                base_url: identityUrl,
-            };
-        }
-
-        const result = await AutoDiscovery.fromDiscoveryConfig(wellknownConfig);
+        const result = await AutoDiscovery.fromDiscoveryConfig(
+            AutoDiscoveryUtils.buildWellKnownConfigFromUrls(homeserverUrl, identityUrl),
+        );
 
         const url = new URL(homeserverUrl);
         const serverName = url.hostname;

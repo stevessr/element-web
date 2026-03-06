@@ -59,13 +59,26 @@ If both `default_server_config` and `default_server_name` are used, Element will
 information using `.well-known`, and if that fails, take `default_server_config` as the homeserver connection
 information.
 
-If you want to offer a list of predefined homeservers in the login/registration UI, use `homeserver_options`:
+If you want to offer a list of predefined homeservers in the login/registration UI, use `homeserver_options` with the same server config style as the default server options:
 
 ```json
 {
     "homeserver_options": [
-        { "name": "Matrix.org", "server": "matrix.org" },
-        { "name": "Example Homeserver", "server": "https://hs.example.com" }
+        {
+            "name": "Matrix.org",
+            "default_server_name": "matrix.org"
+        },
+        {
+            "name": "Example Homeserver",
+            "default_server_config": {
+                "m.homeserver": {
+                    "base_url": "https://hs.example.com"
+                },
+                "m.identity_server": {
+                    "base_url": "https://is.example.com"
+                }
+            }
+        }
     ]
 }
 ```
@@ -73,7 +86,10 @@ If you want to offer a list of predefined homeservers in the login/registration 
 Where:
 
 - `name`: Display name shown in the UI.
-- `server`: Homeserver domain (for well-known lookup) or full URL.
+- `default_server_config`: Preferred preset config source (same format as `default_server_config`).
+- `default_server_name`: Homeserver domain used for `.well-known` lookup.
+- `default_hs_url` + optional `default_is_url`: Deprecated URL-based config source.
+- `server`: Legacy preset field (homeserver domain or URL). Still supported for backwards compatibility, but migration to the fields above is recommended.
 
 ## Labs flags
 

@@ -280,8 +280,16 @@ describe("<ServerPickerDialog />", () => {
 
     describe("with homeserver options", () => {
         const homeserverOptions = [
-            { name: "Preset One", server: "https://preset-one.site" },
-            { name: "Preset Two", server: "https://preset-two.site" },
+            { name: "Preset One", default_server_name: "preset-one.site" },
+            {
+                name: "Preset Two",
+                default_server_config: {
+                    "m.homeserver": {
+                        base_url: "https://preset-two.site",
+                    },
+                },
+            },
+            { name: "Legacy Preset", server: "https://legacy.site" },
         ];
 
         beforeEach(() => {
@@ -293,11 +301,43 @@ describe("<ServerPickerDialog />", () => {
 
             expect(screen.getByTestId("presetHomeserver-0")).toBeInTheDocument();
             expect(screen.getByTestId("presetHomeserver-1")).toBeInTheDocument();
+            expect(screen.getByTestId("presetHomeserver-2")).toBeInTheDocument();
             expect(screen.getByText("Preset One")).toBeInTheDocument();
             expect(screen.getByText("Preset Two")).toBeInTheDocument();
+            expect(screen.getByText("Legacy Preset")).toBeInTheDocument();
         });
 
-        it("should submit successfully with a selected preset homeserver", async () => {
+        it("should submit successfully with a selected preset homeserver using default_server_name", async () => {
+            const onFinished = jest.fn();
+            fetchMock.get("https://preset-one.site/.well-known/matrix/client", {
+                "m.homeserver": {
+                    base_url: "https://preset-one.site",
+                },
+            });
+            fetchMock.get("https://preset-one.site/_matrix/client/versions", {
+                unstable_features: {},
+                versions: SERVER_SUPPORTED_MATRIX_VERSIONS,
+            });
+            getComponent({ onFinished });
+
+            fireEvent.click(screen.getByTestId("presetHomeserver-0"));
+            expect(screen.getByTestId("presetHomeserver-0")).toBeChecked();
+
+            fireEvent.click(screen.getByText("Continue"));
+            await flushPromises();
+
+            expect(onFinished).toHaveBeenCalledWith({
+                hsName: "preset-one.site",
+                hsUrl: "https://preset-one.site",
+                hsNameIsDifferent: false,
+                warning: null,
+                isDefault: false,
+                isNameResolvable: true,
+                isUrl: defaultServerConfig.isUrl,
+            });
+        });
+
+        it("should submit successfully with a selected preset homeserver using default_server_config", async () => {
             const onFinished = jest.fn();
             fetchMock.get("https://preset-two.site/_matrix/client/versions", {
                 unstable_features: {},
@@ -317,12 +357,37 @@ describe("<ServerPickerDialog />", () => {
                 hsNameIsDifferent: false,
                 warning: null,
                 isDefault: false,
-                isNameResolvable: false,
+                isNameResolvable: true,
                 isUrl: defaultServerConfig.isUrl,
             });
         });
 
-        it("should initialise as selected when current server matches a preset", () => {
+        it("should submit successfully with a selected legacy preset homeserver", async () => {
+            const onFinished = jest.fn();
+            fetchMock.get("https://legacy.site/_matrix/client/versions", {
+                unstable_features: {},
+                versions: SERVER_SUPPORTED_MATRIX_VERSIONS,
+            });
+            getComponent({ onFinished });
+
+            fireEvent.click(screen.getByTestId("presetHomeserver-2"));
+            expect(screen.getByTestId("presetHomeserver-2")).toBeChecked();
+
+            fireEvent.click(screen.getByText("Continue"));
+            await flushPromises();
+
+            expect(onFinished).toHaveBeenCalledWith({
+                hsName: "legacy.site",
+                hsUrl: "https://legacy.site",
+                hsNameIsDifferent: false,
+                warning: null,
+                isDefault: false,
+                isNameResolvable: true,
+                isUrl: defaultServerConfig.isUrl,
+            });
+        });
+
+        it("should initialise as selected when current server matches default_server_config preset", () => {
             const serverConfig: ValidatedServerConfig = {
                 hsUrl: "https://preset-two.site",
                 hsName: "preset-two.site",
@@ -338,8 +403,29 @@ describe("<ServerPickerDialog />", () => {
             expect(screen.getByTestId("presetHomeserver-1")).toBeChecked();
         });
 
+        it("should initialise as selected when current server matches default_server_name preset", () => {
+            const serverConfig: ValidatedServerConfig = {
+                hsUrl: "https://preset-one.site",
+                hsName: "preset-one.site",
+                hsNameIsDifferent: false,
+                isUrl: "https://is.org",
+                isDefault: false,
+                isNameResolvable: true,
+                warning: "",
+            };
+
+            getComponent({ serverConfig });
+
+            expect(screen.getByTestId("presetHomeserver-0")).toBeChecked();
+        });
+
         it("should hide custom input but allow preset submit when custom URLs are disabled", async () => {
             SdkConfig.add({ disable_custom_urls: true });
+            fetchMock.get("https://preset-one.site/.well-known/matrix/client", {
+                "m.homeserver": {
+                    base_url: "https://preset-one.site",
+                },
+            });
             fetchMock.get("https://preset-one.site/_matrix/client/versions", {
                 unstable_features: {},
                 versions: SERVER_SUPPORTED_MATRIX_VERSIONS,
@@ -360,7 +446,7 @@ describe("<ServerPickerDialog />", () => {
                 hsNameIsDifferent: false,
                 warning: null,
                 isDefault: false,
-                isNameResolvable: false,
+                isNameResolvable: true,
                 isUrl: defaultServerConfig.isUrl,
             });
         });

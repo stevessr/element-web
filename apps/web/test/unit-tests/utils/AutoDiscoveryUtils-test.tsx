@@ -11,10 +11,14 @@ import { logger } from "matrix-js-sdk/src/logger";
 import fetchMock from "@fetch-mock/jest";
 
 import AutoDiscoveryUtils from "../../../src/utils/AutoDiscoveryUtils";
+import SdkConfig from "../../../src/SdkConfig";
 import { mockOpenIdConfiguration } from "../../test-utils/oidc";
 
 describe("AutoDiscoveryUtils", () => {
+    const SERVER_SUPPORTED_MATRIX_VERSIONS = ["v1.1", "v1.5", "v1.6", "v1.8", "v1.9"];
+
     beforeEach(() => {
+        SdkConfig.reset();
         fetchMock.catch({
             status: 404,
             body: '{"errcode": "M_UNRECOGNIZED", "error": "Unrecognized request"}',
@@ -371,6 +375,59 @@ describe("AutoDiscoveryUtils", () => {
                 }),
                 warning: null,
             });
+        });
+    });
+
+    describe("validateServerConfigSource()", () => {
+        it("should resolve default_server_name config source", async () => {
+            fetchMock.get("https://preset-one.site/.well-known/matrix/client", {
+                "m.homeserver": {
+                    base_url: "https://preset-one.site",
+                },
+            });
+            fetchMock.get("https://preset-one.site/_matrix/client/versions", {
+                unstable_features: {},
+                versions: SERVER_SUPPORTED_MATRIX_VERSIONS,
+            });
+
+            await expect(
+                AutoDiscoveryUtils.validateServerConfigSource({
+                    default_server_name: "preset-one.site",
+                }),
+            ).resolves.toEqual(
+                expect.objectContaining({
+                    hsName: "preset-one.site",
+                    hsUrl: "https://preset-one.site",
+                    hsNameIsDifferent: false,
+                    isNameResolvable: true,
+                }),
+            );
+        });
+
+        it("should use default_server_config as fallback when default_server_name lookup fails", async () => {
+            fetchMock.get("https://preset-fallback.site/.well-known/matrix/client", 500);
+            fetchMock.get("https://fallback.site/_matrix/client/versions", {
+                unstable_features: {},
+                versions: SERVER_SUPPORTED_MATRIX_VERSIONS,
+            });
+
+            await expect(
+                AutoDiscoveryUtils.validateServerConfigSource({
+                    default_server_name: "preset-fallback.site",
+                    default_server_config: {
+                        "m.homeserver": {
+                            base_url: "https://fallback.site",
+                        },
+                    },
+                }),
+            ).resolves.toEqual(
+                expect.objectContaining({
+                    hsName: "preset-fallback.site",
+                    hsUrl: "https://fallback.site",
+                    hsNameIsDifferent: true,
+                    isNameResolvable: true,
+                }),
+            );
         });
     });
 

@@ -10,8 +10,21 @@
     },
     "disable_custom_urls": false,
     "homeserver_options": [
-        { "name": "Matrix.org", "server": "matrix.org" },
-        { "name": "Example Homeserver", "server": "https://hs.example.com" }
+        {
+            "name": "Matrix.org",
+            "default_server_name": "matrix.org"
+        },
+        {
+            "name": "Example Homeserver",
+            "default_server_config": {
+                "m.homeserver": {
+                    "base_url": "https://hs.example.com"
+                },
+                "m.identity_server": {
+                    "base_url": "https://is.example.com"
+                }
+            }
+        }
     ],
     "disable_guests": false,
     "disable_login_language_selector": false,

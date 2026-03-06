@@ -24,6 +24,18 @@ import { type ValidatedServerConfig } from "./utils/ValidatedServerConfig";
 export const BugReportEndpointURLLocal = "local";
 
 // see element-web config.md for non-developer docs
+export interface IServerConfigSource {
+    default_server_config?: IClientWellKnown;
+    default_server_name?: string;
+    default_hs_url?: string;
+    default_is_url?: string;
+}
+
+export interface IConfigHomeserverOption extends IServerConfigSource {
+    name: string;
+    server?: string;
+}
+
 export interface IConfigOptions {
     // dev note: while true that this is arbitrary JSON, it's valuable to enforce that all
     // config options are documented for "find all usages" sort of searching.
@@ -47,10 +59,7 @@ export interface IConfigOptions {
     fallback_hs_url?: string;
 
     disable_custom_urls?: boolean;
-    homeserver_options?: Array<{
-        name: string;
-        server: string;
-    }>;
+    homeserver_options?: IConfigHomeserverOption[];
     disable_guests?: boolean;
     disable_login_language_selector?: boolean;
     disable_3pid_login?: boolean;

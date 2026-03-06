@@ -142,7 +142,7 @@ describe("Login", function () {
         SdkConfig.put({
             brand: "test-brand",
             disable_custom_urls: true,
-            homeserver_options: [{ name: "Matrix", server: "matrix.org" }],
+            homeserver_options: [{ name: "Matrix", default_server_name: "matrix.org" }],
             oidc_static_clients: oidcStaticClientsConfig,
         });
 

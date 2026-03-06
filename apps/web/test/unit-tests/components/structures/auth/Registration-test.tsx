@@ -131,7 +131,7 @@ describe("Registration", function () {
         SdkConfig.put({
             ...DEFAULTS,
             disable_custom_urls: true,
-            homeserver_options: [{ name: "Matrix", server: "matrix.org" }],
+            homeserver_options: [{ name: "Matrix", default_server_name: "matrix.org" }],
         });
 
         const { container } = getComponent();

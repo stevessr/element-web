@@ -14,7 +14,6 @@ Please see LICENSE files in the repository root for full details.
 import "matrix-js-sdk/src/browser-index";
 import React, { type ReactElement, StrictMode } from "react";
 import { logger } from "matrix-js-sdk/src/logger";
-import { AutoDiscovery, type ClientConfig } from "matrix-js-sdk/src/matrix";
 import { WrapperLifecycle, type WrapperOpts } from "@matrix-org/react-sdk-module-api/lib/lifecycles/WrapperLifecycle";
 
 import type { QueryDict } from "matrix-js-sdk/src/utils";
@@ -29,7 +28,6 @@ import { type ValidatedServerConfig } from "../utils/ValidatedServerConfig";
 import { ModuleRunner } from "../modules/ModuleRunner";
 import { parseQs } from "./url_utils";
 import { getInitialScreenAfterLogin, getScreenFromLocation, init as initRouting, onNewScreen } from "./routing";
-import { UserFriendlyError } from "../languageHandler";
 import { ModuleApi } from "../modules/Api";
 import { RoomView } from "../components/structures/RoomView";
 import RoomAvatar from "../components/views/avatars/RoomAvatar";
@@ -182,60 +180,10 @@ async function verifyServerConfig(): Promise<IConfigOptions> {
         // validators for that purpose.
 
         const config = SdkConfig.get();
-        let wkConfig = config["default_server_config"]; // overwritten later under some conditions
-        const serverName = config["default_server_name"];
-        const hsUrl = config["default_hs_url"];
-        const isUrl = config["default_is_url"];
-
-        const incompatibleOptions = [wkConfig, serverName, hsUrl].filter((i) => !!i);
-        if (hsUrl && (wkConfig || serverName)) {
-            // noinspection ExceptionCaughtLocallyJS
-            throw new UserFriendlyError("error|invalid_configuration_mixed_server");
-        }
-        if (incompatibleOptions.length < 1) {
-            // noinspection ExceptionCaughtLocallyJS
-            throw new UserFriendlyError("error|invalid_configuration_no_server");
-        }
-
-        if (hsUrl) {
-            logger.log("Config uses a default_hs_url - constructing a default_server_config using this information");
-            logger.warn(
-                "DEPRECATED CONFIG OPTION: In the future, default_hs_url will not be accepted. Please use " +
-                    "default_server_config instead.",
-            );
-
-            wkConfig = {
-                "m.homeserver": {
-                    base_url: hsUrl,
-                },
-            };
-            if (isUrl) {
-                wkConfig["m.identity_server"] = {
-                    base_url: isUrl,
-                };
-            }
-        }
-
-        let discoveryResult: ClientConfig | undefined;
-        if (!serverName && wkConfig) {
-            logger.log("Config uses a default_server_config - validating object");
-            discoveryResult = await AutoDiscovery.fromDiscoveryConfig(wkConfig);
-        }
-
-        if (serverName) {
-            logger.log("Config uses a default_server_name - doing .well-known lookup");
-            logger.warn(
-                "DEPRECATED CONFIG OPTION: In the future, default_server_name will not be accepted. Please " +
-                    "use default_server_config instead.",
-            );
-            discoveryResult = await AutoDiscovery.findClientConfig(serverName);
-            if (discoveryResult["m.homeserver"].base_url === null && wkConfig) {
-                logger.log("Finding base_url failed but a default_server_config was found - using it as a fallback");
-                discoveryResult = await AutoDiscovery.fromDiscoveryConfig(wkConfig);
-            }
-        }
-
-        validatedConfig = await AutoDiscoveryUtils.buildValidatedConfigFromDiscovery(serverName, discoveryResult, true);
+        validatedConfig = await AutoDiscoveryUtils.validateServerConfigSource(config, {
+            syntaxOnly: true,
+            logDeprecationWarnings: true,
+        });
     } catch (e) {
         const { hsUrl, isUrl, userId } = await Lifecycle.getStoredSessionVars();
         if (hsUrl && userId) {
