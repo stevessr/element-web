@@ -49,8 +49,14 @@
     },
     "pnpm": {
         "onlyBuiltDependencies": [
+            "electron",
+            "core-js",
+            "cpu-features",
+            "esbuild",
             "matrix-js-sdk",
-            "electron"
+            "protobufjs",
+            "ssh2",
+            "unrs-resolver"
         ],
         "ignoredBuiltDependencies": [
             "@sentry/cli",
