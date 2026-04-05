@@ -74,6 +74,7 @@ import { StaticNotificationState } from "../../../stores/notifications/StaticNot
 import NotificationBadge from "./NotificationBadge";
 import type LegacyCallEventGrouper from "../../structures/LegacyCallEventGrouper";
 import { type ComposerInsertPayload } from "../../../dispatcher/payloads/ComposerInsertPayload";
+import { type FocusComposerPayload } from "../../../dispatcher/payloads/FocusComposerPayload";
 import { Action } from "../../../dispatcher/actions";
 import PlatformPeg from "../../../PlatformPeg";
 import MemberAvatar from "../avatars/MemberAvatar";
@@ -90,8 +91,10 @@ import { type ViewRoomPayload } from "../../../dispatcher/payloads/ViewRoomPaylo
 import { shouldDisplayReply } from "../../../utils/Reply";
 import PosthogTrackers from "../../../PosthogTrackers";
 import TileErrorBoundary from "../messages/TileErrorBoundary";
+import TextInputDialog from "../dialogs/TextInputDialog";
 import { haveRendererForEvent, isMessageEvent, renderTile } from "../../../events/EventTileFactory";
 import ThreadSummary, { ThreadMessagePreview } from "./ThreadSummary";
+import Stickerpicker from "./Stickerpicker";
 import { ReadReceiptGroup } from "./ReadReceiptGroup";
 import { type ShowThreadPayload } from "../../../dispatcher/payloads/ShowThreadPayload";
 import { isLocalRoom } from "../../../utils/localRoom/isLocalRoom";
@@ -99,6 +102,7 @@ import { UnreadNotificationBadge } from "./NotificationBadge/UnreadNotificationB
 import { getLateEventInfo } from "../../structures/grouper/LateEventGrouper";
 import { Icon as LateIcon } from "../../../../res/img/sensor.svg";
 import PinningUtils from "../../../utils/PinningUtils";
+import Modal from "../../../Modal";
 import { EventPreview } from "./EventPreview";
 import { ElementCallEventType } from "../../../call-types";
 import { E2eMessageSharedIcon } from "./EventTile/E2eMessageSharedIcon.tsx";
@@ -1942,13 +1946,78 @@ function ActionBarWrapper({
     const { isCard } = useContext(CardContext);
     const [optionsMenuAnchorRect, setOptionsMenuAnchorRect] = useState<DOMRect | null>(null);
     const [reactionsMenuAnchorRect, setReactionsMenuAnchorRect] = useState<DOMRect | null>(null);
+    const [customReactionAnchorRect, setCustomReactionAnchorRect] = useState<DOMRect | null>(null);
     const isSearch = Boolean(roomContext.search);
+
+    const sendOrToggleReaction = useCallback(
+        (reaction: string): void => {
+            if (!roomContext.canReact) return;
+            const trimmed = reaction.trim();
+            if (!trimmed) return;
+
+            const userId = MatrixClientPeg.safeGet().getSafeUserId();
+            const myAnnotations = reactions?.getAnnotationsBySender()?.[userId] ?? new Set<MatrixEvent>();
+            const myReactions = Object.fromEntries(
+                [...myAnnotations]
+                    .filter((event) => !event.isRedacted())
+                    .map((event) => [event.getRelation()?.key, event.getId()]),
+            );
+
+            const existingEventId = myReactions[trimmed];
+            if (existingEventId) {
+                if (roomContext.canSelfRedact && !mxEvent.isRedacted()) {
+                    MatrixClientPeg.safeGet().redactEvent(mxEvent.getRoomId()!, existingEventId);
+                    dis.dispatch<FocusComposerPayload>({
+                        action: Action.FocusAComposer,
+                        context: roomContext.timelineRenderingType,
+                    });
+                }
+                return;
+            }
+
+            MatrixClientPeg.safeGet().sendEvent(mxEvent.getRoomId()!, EventType.Reaction, {
+                "m.relates_to": {
+                    rel_type: "m.annotation",
+                    event_id: mxEvent.getId()!,
+                    key: trimmed,
+                },
+            });
+            dis.dispatch({ action: "message_sent" });
+            dis.dispatch<FocusComposerPayload>({
+                action: Action.FocusAComposer,
+                context: roomContext.timelineRenderingType,
+            });
+        },
+        [roomContext.canReact, roomContext.canSelfRedact, roomContext.timelineRenderingType, reactions, mxEvent],
+    );
+
     const handleOptionsClick = useCallback((anchor: HTMLElement | null): void => {
         setOptionsMenuAnchorRect(anchor?.getBoundingClientRect() ?? null);
     }, []);
     const handleReactionsClick = useCallback((anchor: HTMLElement | null): void => {
         setReactionsMenuAnchorRect(anchor?.getBoundingClientRect() ?? null);
     }, []);
+    const handleCustomReactionClick = useCallback((anchor: HTMLElement | null): void => {
+        setCustomReactionAnchorRect(anchor?.getBoundingClientRect() ?? null);
+    }, []);
+    const handleCustomTextReactionClick = useCallback(
+        async (_anchor: HTMLElement | null): Promise<void> => {
+            const { finished } = Modal.createDialog(TextInputDialog, {
+                title: _t("timeline|reactions|custom_text_dialog_title"),
+                description: _t("timeline|reactions|custom_text_dialog_description"),
+                placeholder: _t("timeline|reactions|custom_text_dialog_placeholder"),
+                button: _t("action|react"),
+                hasCancel: true,
+                fixedWidth: false,
+            });
+
+            const [ok, reaction] = await finished;
+            if (ok && reaction) {
+                sendOrToggleReaction(reaction);
+            }
+        },
+        [sendOrToggleReaction],
+    );
     const vm = useCreateAutoDisposedViewModel(
         () =>
             new EventTileActionBarViewModel({
@@ -1961,6 +2030,8 @@ function ActionBarWrapper({
                 isQuoteExpanded,
                 onToggleThreadExpanded: toggleThreadExpanded,
                 onOptionsClick: handleOptionsClick,
+                onCustomReactionClick: handleCustomReactionClick,
+                onCustomTextReactionClick: handleCustomTextReactionClick,
                 onReactionsClick: handleReactionsClick,
                 getRelationsForEvent,
             }),
@@ -1978,6 +2049,8 @@ function ActionBarWrapper({
             getRelationsForEvent,
             onToggleThreadExpanded: toggleThreadExpanded,
             onOptionsClick: handleOptionsClick,
+            onCustomReactionClick: handleCustomReactionClick,
+            onCustomTextReactionClick: handleCustomTextReactionClick,
             onReactionsClick: handleReactionsClick,
         });
     }, [
@@ -1991,17 +2064,20 @@ function ActionBarWrapper({
         isQuoteExpanded,
         getRelationsForEvent,
         handleOptionsClick,
+        handleCustomReactionClick,
+        handleCustomTextReactionClick,
         handleReactionsClick,
         toggleThreadExpanded,
     ]);
 
     useEffect(() => {
-        onFocusChange?.(Boolean(optionsMenuAnchorRect || reactionsMenuAnchorRect));
-    }, [onFocusChange, optionsMenuAnchorRect, reactionsMenuAnchorRect]);
+        onFocusChange?.(Boolean(optionsMenuAnchorRect || reactionsMenuAnchorRect || customReactionAnchorRect));
+    }, [onFocusChange, optionsMenuAnchorRect, reactionsMenuAnchorRect, customReactionAnchorRect]);
 
     useEffect(() => {
         setOptionsMenuAnchorRect(null);
         setReactionsMenuAnchorRect(null);
+        setCustomReactionAnchorRect(null);
     }, [mxEvent]);
 
     const closeOptionsMenu = useCallback((): void => {
@@ -2010,6 +2086,10 @@ function ActionBarWrapper({
 
     const closeReactionsMenu = useCallback((): void => {
         setReactionsMenuAnchorRect(null);
+    }, []);
+
+    const closeCustomReactionMenu = useCallback((): void => {
+        setCustomReactionAnchorRect(null);
     }, []);
 
     const tile = getTile();
@@ -2040,6 +2120,22 @@ function ActionBarWrapper({
                 >
                     <ReactionPicker mxEvent={mxEvent} reactions={reactions} onFinished={closeReactionsMenu} />
                 </ContextMenu>
+            ) : null}
+            {customReactionAnchorRect && roomContext.room ? (
+                <Stickerpicker
+                    room={roomContext.room}
+                    isStickerPickerOpen={true}
+                    setStickerPickerOpen={(isOpen) => {
+                        if (!isOpen) closeCustomReactionMenu();
+                    }}
+                    menuPosition={aboveLeftOf(customReactionAnchorRect)}
+                    mode="reaction"
+                    onPickSticker={(image) => {
+                        sendOrToggleReaction(image.url);
+                        closeCustomReactionMenu();
+                    }}
+                    mountAsChild={false}
+                />
             ) : null}
         </>
     );

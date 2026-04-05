@@ -161,7 +161,14 @@ describe("ActionBarView", () => {
         });
 
         const pinnedVm = new MockViewModel<ActionBarViewSnapshot>({
-            actions: [ActionBarAction.React, ActionBarAction.Reply, ActionBarAction.Pin, ActionBarAction.Options],
+            actions: [
+                ActionBarAction.CustomReaction,
+                ActionBarAction.CustomTextReaction,
+                ActionBarAction.React,
+                ActionBarAction.Reply,
+                ActionBarAction.Pin,
+                ActionBarAction.Options,
+            ],
             presentation: "icon",
             isDownloadEncrypted: false,
             isDownloadLoading: false,
@@ -177,23 +184,27 @@ describe("ActionBarView", () => {
 
         rerender(<ActionBarView vm={pinnedVm} />);
 
+        const customReactionButton = screen.getByRole("button", { name: /sticker reaction/i });
+        const customTextReactionButton = screen.getByRole("button", { name: /custom text/i });
         const reactButton = screen.getByRole("button", { name: /react/i });
         const replyButton = screen.getByRole("button", { name: /^reply$/i });
         const unpinButton = screen.getByRole("button", { name: /unpin/i });
         const optionsButtonInToolbar = screen.getByRole("button", { name: /options/i });
 
-        expect(reactButton).toHaveAttribute("tabindex", "0");
+        expect(customReactionButton).toHaveAttribute("tabindex", "0");
+        expect(customTextReactionButton).toHaveAttribute("tabindex", "-1");
+        expect(reactButton).toHaveAttribute("tabindex", "-1");
         expect(replyButton).toHaveAttribute("tabindex", "-1");
         expect(unpinButton).toHaveAttribute("tabindex", "-1");
         expect(optionsButtonInToolbar).toHaveAttribute("tabindex", "-1");
 
         await user.tab();
-        expect(reactButton).toHaveFocus();
+        expect(customReactionButton).toHaveFocus();
 
-        await user.keyboard("{ArrowRight}");
+        await user.keyboard("{ArrowRight}{ArrowRight}{ArrowRight}");
         expect(replyButton).toHaveFocus();
         expect(replyButton).toHaveAttribute("tabindex", "0");
-        expect(reactButton).toHaveAttribute("tabindex", "-1");
+        expect(customReactionButton).toHaveAttribute("tabindex", "-1");
 
         await user.keyboard("{End}");
         expect(optionsButtonInToolbar).toHaveFocus();

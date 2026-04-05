@@ -63,6 +63,10 @@ export interface EventTileActionBarViewModelProps {
     isQuoteExpanded?: boolean;
     /** Called when the overflow options action is activated. */
     onOptionsClick?: (anchor: HTMLElement | null) => void;
+    /** Called when the custom sticker reaction action is activated. */
+    onCustomReactionClick?: (anchor: HTMLElement | null) => void;
+    /** Called when the custom text reaction action is activated. */
+    onCustomTextReactionClick?: (anchor: HTMLElement | null) => void;
     /** Called when the reactions action is activated. */
     onReactionsClick?: (anchor: HTMLElement | null) => void;
     /** Provides relations needed for editing when available. */
@@ -155,6 +159,8 @@ export class EventTileActionBarViewModel
             actions.push(ActionBarAction.Download);
         }
         if (eventState.showReact) {
+            actions.push(ActionBarAction.CustomReaction);
+            actions.push(ActionBarAction.CustomTextReaction);
             actions.push(ActionBarAction.React);
         }
         if (!eventState.showReply && eventState.showThreadForDeletedMessage) {
@@ -471,6 +477,16 @@ export class EventTileActionBarViewModel
     /** Forwards the overflow options action using the triggering button as the anchor. */
     public onOptionsClick = (anchor: HTMLElement | null): void => {
         this.props.onOptionsClick?.(anchor);
+    };
+
+    /** Forwards the custom sticker reaction action using the triggering button as the anchor. */
+    public onCustomReactionClick = (anchor: HTMLElement | null): void => {
+        this.props.onCustomReactionClick?.(anchor);
+    };
+
+    /** Forwards the custom text reaction action using the triggering button as the anchor. */
+    public onCustomTextReactionClick = (anchor: HTMLElement | null): void => {
+        this.props.onCustomTextReactionClick?.(anchor);
     };
 
     /** Forwards the reactions action using the triggering button as the anchor. */

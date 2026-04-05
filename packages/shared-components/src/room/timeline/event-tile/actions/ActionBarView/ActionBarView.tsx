@@ -8,6 +8,7 @@
 import React, { type JSX, useCallback, useLayoutEffect, useMemo, useRef, useState } from "react";
 import classNames from "classnames";
 import {
+    ChatSolidIcon,
     CollapseIcon,
     DeleteIcon,
     EditIcon,
@@ -65,6 +66,8 @@ export interface ActionBarViewSnapshot {
 export interface ActionBarViewActions {
     onCancelClick?: (anchor: HTMLElement | null) => void;
     onCopyLinkClick?: (anchor: HTMLElement | null) => void;
+    onCustomReactionClick?: (anchor: HTMLElement | null) => void;
+    onCustomTextReactionClick?: (anchor: HTMLElement | null) => void;
     onDownloadClick?: (anchor: HTMLElement | null) => void;
     onEditClick?: (anchor: HTMLElement | null) => void;
     onHideClick?: (anchor: HTMLElement | null) => void;
@@ -91,6 +94,8 @@ export type ActionBarViewModel = ViewModel<ActionBarViewSnapshot, ActionBarViewA
 export enum ActionBarAction {
     Cancel = "cancel",
     CopyLink = "copyLink",
+    CustomReaction = "customReaction",
+    CustomTextReaction = "customTextReaction",
     Download = "download",
     Edit = "edit",
     Expand = "expand",
@@ -214,6 +219,28 @@ export function ActionBarView({ vm, className }: Readonly<ActionBarViewProps>): 
             label={_t("action|reply")}
             onActivate={vm.onReplyClick}
             icon={ReplyIcon}
+        />
+    );
+
+    actionButtons[ActionBarAction.CustomReaction] = (
+        <ActionBarButton
+            key={ActionBarAction.CustomReaction}
+            presentation={presentation}
+            buttonRef={actionButtonRefSetters[ActionBarAction.CustomReaction]}
+            label={_t("timeline|reactions|custom_emoji_action")}
+            onActivate={vm.onCustomReactionClick}
+            icon={ReactionAddIcon}
+        />
+    );
+
+    actionButtons[ActionBarAction.CustomTextReaction] = (
+        <ActionBarButton
+            key={ActionBarAction.CustomTextReaction}
+            presentation={presentation}
+            buttonRef={actionButtonRefSetters[ActionBarAction.CustomTextReaction]}
+            label={_t("timeline|reactions|custom_text_action")}
+            onActivate={vm.onCustomTextReactionClick}
+            icon={ChatSolidIcon}
         />
     );
 

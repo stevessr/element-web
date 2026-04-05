@@ -19,6 +19,8 @@ const ActionBarViewWrapperImpl = ({ ...snapshotAndActions }: ActionBarProps): JS
     const {
         onCancelClick = fn(),
         onCopyLinkClick = fn(),
+        onCustomReactionClick = fn(),
+        onCustomTextReactionClick = fn(),
         onDownloadClick = fn(),
         onEditClick = fn(),
         onHideClick = fn(),
@@ -38,6 +40,8 @@ const ActionBarViewWrapperImpl = ({ ...snapshotAndActions }: ActionBarProps): JS
     const vm = useMockedViewModel(snapshot, {
         onCancelClick,
         onCopyLinkClick,
+        onCustomReactionClick,
+        onCustomTextReactionClick,
         onDownloadClick,
         onEditClick,
         onHideClick,
@@ -71,6 +75,8 @@ const meta = {
         actions: [
             ActionBarAction.Hide,
             ActionBarAction.Download,
+            ActionBarAction.CustomReaction,
+            ActionBarAction.CustomTextReaction,
             ActionBarAction.React,
             ActionBarAction.Reply,
             ActionBarAction.ReplyInThread,
@@ -104,6 +110,8 @@ export const AllLabelActions: Story = {
         actions: [
             ActionBarAction.Hide,
             ActionBarAction.Download,
+            ActionBarAction.CustomReaction,
+            ActionBarAction.CustomTextReaction,
             ActionBarAction.React,
             ActionBarAction.Reply,
             ActionBarAction.ReplyInThread,
@@ -153,7 +161,14 @@ export const DecryptingAttachment: Story = {
 
 export const PinnedMessage: Story = {
     args: {
-        actions: [ActionBarAction.React, ActionBarAction.Reply, ActionBarAction.Pin, ActionBarAction.Options],
+        actions: [
+            ActionBarAction.CustomReaction,
+            ActionBarAction.CustomTextReaction,
+            ActionBarAction.React,
+            ActionBarAction.Reply,
+            ActionBarAction.Pin,
+            ActionBarAction.Options,
+        ],
         isPinned: true,
     },
     parameters: {
@@ -181,7 +196,14 @@ export const ExpandedReplyChain: Story = {
 
 export const DisabledThreadReply: Story = {
     args: {
-        actions: [ActionBarAction.React, ActionBarAction.Reply, ActionBarAction.ReplyInThread, ActionBarAction.Options],
+        actions: [
+            ActionBarAction.CustomReaction,
+            ActionBarAction.CustomTextReaction,
+            ActionBarAction.React,
+            ActionBarAction.Reply,
+            ActionBarAction.ReplyInThread,
+            ActionBarAction.Options,
+        ],
         isThreadReplyAllowed: false,
     },
     parameters: {

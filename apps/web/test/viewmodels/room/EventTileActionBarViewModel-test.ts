@@ -223,6 +223,8 @@ describe("EventTileActionBarViewModel", () => {
         await waitFor(() =>
             expect(vm.getSnapshot()).toMatchObject({
                 actions: [
+                    ActionBarAction.CustomReaction,
+                    ActionBarAction.CustomTextReaction,
                     ActionBarAction.React,
                     ActionBarAction.Reply,
                     ActionBarAction.ReplyInThread,
